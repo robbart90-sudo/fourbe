@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: 'Libre Baskerville', Georgia, serif;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --color-board: #f6f6f6;
+  --color-cell-border: #878a8c;
+  --color-cell-empty: #ffffff;
+  --color-cell-revealed: #ffffff;
+  --color-correct: #6aaa64;
+  --color-wrong: #787c7e;
+  --color-player: #6aaa64;
+  --color-auto: #4a90d9;
+  --color-auto-fill: #eef4fb;
+  --color-auto-text: #2b6cb0;
+  --color-kindof: #d4a843;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+@keyframes pop-in {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@utility animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
+
+@utility animate-pop {
+  animation: pop-in 0.25s ease-out;
+}
+
+@utility animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+@keyframes wobble {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  50% { transform: translateX(2px); }
+  75% { transform: translateX(-2px); }
+}
+
+@utility animate-wobble {
+  animation: wobble 0.2s ease-in-out;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #ffffff;
+  color: #1a1a1b;
+}
+
+#root {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
