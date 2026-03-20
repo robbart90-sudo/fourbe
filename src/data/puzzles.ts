@@ -9,17 +9,17 @@ export const hardcodedPuzzles: HardcodedPuzzleEntry[] = [
   {
     date: '2026-03-22',
     puzzle: {
-      subject: 'Arthur (the Aardvark)',
+      subject: 'Peyton Manning',
       subjectArticle: 'Who am I?',
       rounds: [
-        { clue: 'Unlimited books with a swipe', answer: 'LIBRARY CARD', connection: 'Arthur wrote a song about it', round: 1 },
-        { clue: 'Bug ranch?', answer: 'ANT FARM', connection: 'Aardvarks eat ants', round: 2 },
-        { clue: 'Funded by viewers like you', answer: 'PUBLIC BROADCASTING SERVICE', connection: "Arthur's TV home", round: 3 },
-        { clue: 'Hand-based stress reactions', answer: 'CLENCHED FIST', connection: "Arthur got meme'd", round: 4 },
+        { clue: 'All work and no pay', answer: 'VOLUNTEER', connection: 'College days', round: 1 },
+        { clue: '___ and two zig zags, baby that\'s all we need', answer: 'COLT FORTY-FIVE', connection: 'Pro days', round: 2 },
+        { clue: "Warren Buffett's notable nickname", answer: 'THE WIZARD OF OMAHA', connection: 'Audible plays', round: 3 },
+        { clue: 'Paying $1 on a .75 bill', answer: 'QUARTERBACK', connection: 'Positional ways', round: 4 },
       ],
       acceptList: {
-        perfect: ['Arthur', 'Arthur the Aardvark', 'Arthur Read', 'Arthur Timothy Read', 'PBS Arthur', 'Arthur TV show', 'Arthur cartoon', 'Arthur series', 'Arthur PBS', "Arthur children's show"],
-        kindOf: ['PBS Kids', 'public television', "children's television", 'educational TV', 'DW', 'Francine', 'Buster', 'animated series', 'cartoon character', 'educational cartoon', 'Arthur books'],
+        perfect: ['Peyton Manning', 'Peyton', 'Manning', 'Peyton Williams Manning'],
+        kindOf: ['Colts quarterback', 'Denver quarterback', 'Indianapolis quarterback', 'Manning brother', "Eli's brother", "Archie's son", 'NFL quarterback', 'football player'],
       },
     },
   },
@@ -43,17 +43,17 @@ export const hardcodedPuzzles: HardcodedPuzzleEntry[] = [
   {
     date: '2026-03-24',
     puzzle: {
-      subject: 'Peyton Manning',
+      subject: 'Arthur (the Aardvark)',
       subjectArticle: 'Who am I?',
       rounds: [
-        { clue: 'All work and no pay', answer: 'VOLUNTEER', connection: 'College days', round: 1 },
-        { clue: '___ and two zig zags, baby that\'s all we need', answer: 'COLT FORTY-FIVE', connection: 'Pro days', round: 2 },
-        { clue: "Warren Buffett's notable nickname", answer: 'THE WIZARD OF OMAHA', connection: 'Audible plays', round: 3 },
-        { clue: 'Paying $1 on a .75 bill', answer: 'QUARTERBACK', connection: 'Positional ways', round: 4 },
+        { clue: 'Unlimited books with a swipe', answer: 'LIBRARY CARD', connection: 'Arthur wrote a song about it', round: 1 },
+        { clue: 'Bug ranch?', answer: 'ANT FARM', connection: 'Aardvarks eat ants', round: 2 },
+        { clue: 'Funded by viewers like you', answer: 'PUBLIC BROADCASTING SERVICE', connection: "Arthur's TV home", round: 3 },
+        { clue: 'Hand-based stress reactions', answer: 'CLENCHED FIST', connection: "Arthur got meme'd", round: 4 },
       ],
       acceptList: {
-        perfect: ['Peyton Manning', 'Peyton', 'Manning', 'Peyton Williams Manning'],
-        kindOf: ['Colts quarterback', 'Denver quarterback', 'Indianapolis quarterback', 'Manning brother', "Eli's brother", "Archie's son", 'NFL quarterback', 'football player'],
+        perfect: ['Arthur', 'Arthur the Aardvark', 'Arthur Read', 'Arthur Timothy Read', 'PBS Arthur', 'Arthur TV show', 'Arthur cartoon', 'Arthur series', 'Arthur PBS', "Arthur children's show"],
+        kindOf: ['PBS Kids', 'public television', "children's television", 'educational TV', 'DW', 'Francine', 'Buster', 'animated series', 'cartoon character', 'educational cartoon', 'Arthur books'],
       },
     },
   },
