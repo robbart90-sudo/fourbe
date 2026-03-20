@@ -23,7 +23,7 @@ function AnswerTileRow({ answer, variant }: { answer: string; variant: 'solved' 
     : 'border-gray-300 bg-gray-100 text-gray-400';
 
   return (
-    <div className="flex flex-wrap gap-[3px]" style={{ rowGap: '3px' }}>
+    <div className="flex flex-wrap justify-start gap-[3px]" style={{ rowGap: '3px' }}>
       {upper.split(' ').map((word, wi, arr) => (
         <React.Fragment key={wi}>
           <div className="flex gap-[3px]" style={{ flexWrap: 'nowrap' }}>
