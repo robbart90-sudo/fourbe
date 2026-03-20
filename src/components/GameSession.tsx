@@ -1,16 +1,16 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from 'react';
 import type { Puzzle, RoundResult } from '../types';
 import GameRound from './GameRound';
 import { FourbeLogo } from './FourbeLogo';
 import HowToPlayModal from './HowToPlayModal';
 import { judgeGuess } from '../lib/judge';
 import { playPerfectJingle, playKindOfSound, playFailSound } from '../lib/sounds';
+import { trackGameResult } from '../lib/analytics';
 
 const HTP_SEEN_KEY = 'fourbe-played-before';
 const TILE_MAX_SM = 36;
 const TILE_MIN_SM = 18;
 const TILE_GAP_SM = 3;
-const PAGE_PAD = 16;
 
 type SessionPhase = 'start' | 'playing' | 'final-guess' | 'reveal';
 type FinalJudgment = 'Perfect!' | 'Kind Of!' | 'Not Quite...' | 'Time!';
@@ -19,30 +19,33 @@ function isLetter(ch: string): boolean {
   return ch >= 'A' && ch <= 'Z';
 }
 
-function useWindowWidth() {
-  const [width, setWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 500);
-  useEffect(() => {
-    const onResize = () => setWidth(window.innerWidth);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
+function useContainerWidth(ref: React.RefObject<HTMLElement | null>) {
+  const [width, setWidth] = useState(0);
+  useLayoutEffect(() => {
+    if (!ref.current) return;
+    const measure = () => setWidth(ref.current?.clientWidth ?? 0);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(ref.current);
+    return () => ro.disconnect();
+  }, [ref]);
   return width;
 }
 
 // --- Shared tile row for displaying answers ---
-function AnswerTileRow({ answer, variant, windowWidth }: { answer: string; variant: 'solved' | 'failed'; windowWidth: number }) {
+function AnswerTileRow({ answer, variant, containerWidth }: { answer: string; variant: 'solved' | 'failed'; containerWidth: number }) {
   const upper = answer.toUpperCase();
   const tileClass = variant === 'solved'
     ? 'border-player bg-player text-white'
     : 'border-gray-300 bg-gray-100 text-gray-400';
 
   const tileSize = useMemo(() => {
+    if (containerWidth === 0) return TILE_MAX_SM;
     const words = upper.split(' ');
     const longestWord = Math.max(...words.map((w) => [...w].filter(isLetter).length));
-    const available = windowWidth - PAGE_PAD * 2;
-    const maxFit = Math.floor((available - (longestWord - 1) * TILE_GAP_SM) / longestWord);
+    const maxFit = Math.floor((containerWidth - (longestWord - 1) * TILE_GAP_SM) / longestWord);
     return Math.max(TILE_MIN_SM, Math.min(TILE_MAX_SM, maxFit));
-  }, [upper, windowWidth]);
+  }, [upper, containerWidth]);
 
   const fontSize = Math.max(9, Math.round(tileSize * 0.45));
   const punctWidth = Math.max(8, Math.round(tileSize * 0.4));
@@ -191,7 +194,8 @@ function ScoreBar({
 }
 
 export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNextPuzzle }: { puzzle: Puzzle; dateSelector?: React.ReactNode; nextPuzzleDate?: string | null; onNextPuzzle?: () => void }) {
-  const windowWidth = useWindowWidth();
+  const sessionRef = useRef<HTMLDivElement>(null);
+  const containerWidth = useContainerWidth(sessionRef);
   const [phase, setPhase] = useState<SessionPhase>('start');
   const [currentRoundIdx, setCurrentRoundIdx] = useState(0);
   const [results, setResults] = useState<RoundResult[]>([]);
@@ -254,18 +258,40 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
     }
 
     const trimmed = guess.trim();
+    let judgment: FinalJudgment;
+    let fScore: number;
 
     if (!trimmed) {
-      setFinalJudgment('Time!');
-      setFinalScore(0);
+      judgment = 'Time!';
+      fScore = 0;
     } else {
       const result = judgeGuess(trimmed, puzzle);
-      setFinalJudgment(result.judgment);
-      setFinalScore(result.score);
+      judgment = result.judgment;
+      fScore = result.score;
     }
 
+    setFinalJudgment(judgment);
+    setFinalScore(fScore);
     setPhase('reveal');
-  }, [puzzle]);
+
+    // Fire-and-forget analytics
+    const roundScore = results.reduce((s, r) => s + r.score, 0);
+    trackGameResult({
+      puzzle: puzzle.subject,
+      r1Score: results[0]?.score ?? 0,
+      r1Lives: results[0]?.lives ?? 0,
+      r2Score: results[1]?.score ?? 0,
+      r2Lives: results[1]?.lives ?? 0,
+      r3Score: results[2]?.score ?? 0,
+      r3Lives: results[2]?.lives ?? 0,
+      r4Score: results[3]?.score ?? 0,
+      r4Lives: results[3]?.lives ?? 0,
+      finalGuess: trimmed,
+      judgment,
+      finalScore: fScore,
+      totalScore: roundScore + fScore,
+    });
+  }, [puzzle, results]);
 
   // --- Final guess timer ---
   const finalTick = useCallback(() => {
@@ -443,7 +469,7 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
   // ===========================================
   if (phase === 'final-guess') {
     return (
-      <div className="flex flex-col items-center pt-10 pb-16 min-h-[calc(100vh-52px)]">
+      <div ref={sessionRef} className="flex flex-col items-center pt-10 pb-16 min-h-[calc(100vh-52px)]">
         <h2 className="text-2xl text-gray-800 text-center mb-10" style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26 }}>
           What's Today's Fourbe?
         </h2>
@@ -459,7 +485,7 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
                   Round {r.round}
                 </div>
                 {solved ? (
-                  <AnswerTileRow answer={r.answer} variant="solved" windowWidth={windowWidth} />
+                  <AnswerTileRow answer={r.answer} variant="solved" containerWidth={containerWidth} />
                 ) : (
                   <p className="text-lg font-bold font-sans text-gray-300 tracking-wide">???</p>
                 )}
@@ -533,7 +559,7 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
   });
 
   return (
-    <div className="flex flex-col items-center pt-12 pb-16 min-h-[calc(100vh-52px)]">
+    <div ref={sessionRef} className="flex flex-col items-center pt-12 pb-16 min-h-[calc(100vh-52px)]">
 
       {/* 1. JUDGMENT WORD — biggest, boldest */}
       <p
@@ -637,7 +663,7 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
                   {roundScore > 0 ? roundScore.toLocaleString() : '0'} pts
                 </span>
               </div>
-              <AnswerTileRow answer={r.answer} variant={solved ? 'solved' : 'failed'} windowWidth={windowWidth} />
+              <AnswerTileRow answer={r.answer} variant={solved ? 'solved' : 'failed'} containerWidth={containerWidth} />
               <p className={`text-sm italic mt-2 ${
                 solved ? 'text-green-700' : 'text-gray-400'
               }`}>

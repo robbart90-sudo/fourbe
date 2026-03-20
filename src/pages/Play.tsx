@@ -65,9 +65,9 @@ export default function Play() {
             onChange={(e) => setSelectedDate(e.target.value)}
             className="mt-4 text-xs text-gray-400 bg-transparent border-none outline-none cursor-pointer opacity-60 hover:opacity-100 transition-opacity"
           >
-            {allDates.map((date) => (
+            {allDates.map((date, i) => (
               <option key={date} value={date}>
-                {formatDateLabel(date)}
+                Playtest Puzzle #{i + 1}
               </option>
             ))}
           </select>
