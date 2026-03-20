@@ -10,6 +10,10 @@ const REVEAL_LABELS: Record<number, string> = {
   4: 'Reveal 4 — queue[3] (6s)',
 };
 
+function isLetter(ch: string): boolean {
+  return ch >= 'A' && ch <= 'Z';
+}
+
 function AnswerDisplay({ answer, level }: { answer: string; level: number }) {
   const revealed = getRevealedAtChunk(answer, level);
   const upper = answer.toUpperCase();
@@ -18,6 +22,16 @@ function AnswerDisplay({ answer, level }: { answer: string; level: number }) {
     <div className="flex flex-wrap gap-[3px]">
       {[...upper].map((ch, i) => {
         if (ch === ' ') return <div key={i} className="w-2.5" />;
+        if (!isLetter(ch)) {
+          return (
+            <div
+              key={i}
+              className="w-5 h-9 flex items-center justify-center text-sm font-bold font-sans text-gray-500"
+            >
+              {ch}
+            </div>
+          );
+        }
         const isRevealed = revealed[i];
         return (
           <div
@@ -39,7 +53,7 @@ function AnswerDisplay({ answer, level }: { answer: string; level: number }) {
 function RevealStats({ answer, level }: { answer: string; level: number }) {
   const revealed = getRevealedAtChunk(answer, level);
   const upper = answer.toUpperCase();
-  const letterCount = [...upper].filter((c) => c !== ' ').length;
+  const letterCount = [...upper].filter((c) => isLetter(c)).length;
   const revealedCount = revealed.filter(Boolean).length;
   const pct = letterCount > 0 ? Math.round((revealedCount / letterCount) * 100) : 0;
 

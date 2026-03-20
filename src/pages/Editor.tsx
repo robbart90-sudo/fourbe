@@ -40,7 +40,8 @@ function RevealPreview({ answer }: { answer: string }) {
 
   const upper = answer.toUpperCase();
   const revealed = getRevealedAtChunk(upper, level);
-  const letterCount = [...upper].filter((c) => c !== ' ').length;
+  const isLetter = (c: string) => c >= 'A' && c <= 'Z';
+  const letterCount = [...upper].filter(isLetter).length;
   const revealedCount = revealed.filter(Boolean).length;
   const pct = letterCount > 0 ? Math.round((revealedCount / letterCount) * 100) : 0;
 
@@ -76,6 +77,16 @@ function RevealPreview({ answer }: { answer: string }) {
           const startIdx = globalIdx;
           const tiles = [...word].map((ch, li) => {
             const idx = startIdx + li;
+            if (!isLetter(ch)) {
+              return (
+                <div
+                  key={idx}
+                  className="w-4 h-8 flex items-center justify-center text-xs font-bold font-sans text-gray-500"
+                >
+                  {ch}
+                </div>
+              );
+            }
             const isRevealed = revealed[idx];
             return (
               <div

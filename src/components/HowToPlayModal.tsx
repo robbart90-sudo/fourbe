@@ -7,16 +7,27 @@ const EXAMPLES = [
   { clue: 'British weekend feast', answer: 'SUNDAY ROAST' },
 ];
 
+function isLetter(ch: string): boolean {
+  return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z');
+}
+
 function AnswerTiles({ answer }: { answer: string }) {
   return (
     <div className="flex gap-[3px] justify-end">
       {[...answer].map((ch, i) =>
         ch === ' ' ? (
           <div key={i} className="w-1.5" />
-        ) : (
+        ) : isLetter(ch) ? (
           <div
             key={i}
             className="w-8 h-8 flex items-center justify-center text-sm font-bold font-sans border-2 border-player bg-player text-white select-none"
+          >
+            {ch}
+          </div>
+        ) : (
+          <div
+            key={i}
+            className="w-4 h-8 flex items-center justify-center text-sm font-bold font-sans text-gray-500 select-none"
           >
             {ch}
           </div>

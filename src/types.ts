@@ -20,6 +20,7 @@ export interface Puzzle {
 export interface RoundResult {
   solved: boolean;
   score: number;
+  lives: number;
   answer: string;
   connection: string;
 }

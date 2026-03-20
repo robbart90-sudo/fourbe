@@ -11,6 +11,10 @@ const HTP_SEEN_KEY = 'fourbe-played-before';
 type SessionPhase = 'start' | 'playing' | 'final-guess' | 'reveal';
 type FinalJudgment = 'Perfect!' | 'Kind Of!' | 'Not Quite...' | 'Time!';
 
+function isLetter(ch: string): boolean {
+  return ch >= 'A' && ch <= 'Z';
+}
+
 // --- Shared tile row for displaying answers ---
 function AnswerTileRow({ answer, variant }: { answer: string; variant: 'solved' | 'failed' }) {
   const upper = answer.toUpperCase();
@@ -23,15 +27,25 @@ function AnswerTileRow({ answer, variant }: { answer: string; variant: 'solved' 
       {upper.split(' ').map((word, wi, arr) => (
         <React.Fragment key={wi}>
           <div className="flex gap-[3px]" style={{ flexWrap: 'nowrap' }}>
-            {[...word].map((ch, ci) => (
-              <div
-                key={ci}
-                className={`w-[36px] h-[36px] flex items-center justify-center font-bold font-sans border-2 select-none ${tileClass}`}
-                style={{ fontSize: 16 }}
-              >
-                {ch}
-              </div>
-            ))}
+            {[...word].map((ch, ci) =>
+              isLetter(ch) ? (
+                <div
+                  key={ci}
+                  className={`w-[36px] h-[36px] flex items-center justify-center font-bold font-sans border-2 select-none ${tileClass}`}
+                  style={{ fontSize: 16 }}
+                >
+                  {ch}
+                </div>
+              ) : (
+                <div
+                  key={ci}
+                  className="w-4 h-[36px] flex items-center justify-center font-bold font-sans text-gray-500 select-none"
+                  style={{ fontSize: 16 }}
+                >
+                  {ch}
+                </div>
+              )
+            )}
           </div>
           {wi < arr.length - 1 && <div className="w-1.5" />}
         </React.Fragment>
@@ -95,6 +109,7 @@ function ScoreBar({
   colorClass,
   delay,
   active,
+  lives,
 }: {
   label: string;
   score: number;
@@ -102,6 +117,7 @@ function ScoreBar({
   colorClass: string;
   delay: number;
   active: boolean;
+  lives?: number;
 }) {
   const pct = Math.max(0, (score / maxScore) * 100);
   const [animated, setAnimated] = useState(false);
@@ -132,6 +148,18 @@ function ScoreBar({
           }}
         />
       </div>
+      {lives != null && (
+        <span className="flex gap-[3px] shrink-0">
+          {Array.from({ length: 4 }, (_, i) => (
+            <span
+              key={i}
+              className={`inline-block w-[7px] h-[7px] rounded-full ${
+                i < lives ? 'bg-[#3a7bd5]' : 'border border-gray-300'
+              }`}
+            />
+          ))}
+        </span>
+      )}
       <span className="text-xs font-medium text-gray-400 w-14 tabular-nums">
         {score > 0 ? score.toLocaleString() : '0'}
       </span>
@@ -300,13 +328,17 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
 
   // --- Share handler ---
   const handleShare = async () => {
-    const squares: string[] = results.map((r) => r.solved ? '\u{1F7E9}' : '\u2B1C');
-    // Final guess square
-    if (finalJudgment === 'Perfect!') squares.push('\u{1F7E9}');
-    else if (finalJudgment === 'Kind Of!') squares.push('\u{1F7E8}');
-    else squares.push('\u2B1C');
+    // Lives dots per round
+    const roundDots = results.map((r) => {
+      const filled = r.lives ?? 0;
+      return '\u25CF'.repeat(filled) + '\u25CB'.repeat(4 - filled);
+    });
+    // Final guess emoji
+    let fourbeEmoji = '\u2B1C';
+    if (finalJudgment === 'Perfect!') fourbeEmoji = '\u{1F7E9}';
+    else if (finalJudgment === 'Kind Of!') fourbeEmoji = '\u{1F7E8}';
 
-    const text = `Fourbe \u2014 ${formatDate()}\n${squares.join('')}\n${totalScore.toLocaleString()} pts`;
+    const text = `Fourbe \u2014 ${formatDate()}\n${roundDots.join(' ')} ${fourbeEmoji}\n${totalScore.toLocaleString()} pts`;
 
     try {
       await navigator.clipboard.writeText(text);
@@ -542,6 +574,7 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
               colorClass={solved ? 'bg-player' : 'bg-gray-300'}
               delay={i * 100}
               active={revealStep >= 4}
+              lives={result?.lives ?? 0}
             />
           );
         })}

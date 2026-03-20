@@ -9,11 +9,15 @@
 // English letters sorted rarest first
 const FREQ_ORDER = 'ZQJXKVBYWGFPMCHDUOIANLSTRE';
 
+function isLetter(ch: string): boolean {
+  return ch >= 'A' && ch <= 'Z';
+}
+
 export function getRevealQueue(answer: string): string[] {
   const upper = answer.toUpperCase();
   const uniqueLetters = new Set<string>();
   for (const ch of upper) {
-    if (ch !== ' ') uniqueLetters.add(ch);
+    if (isLetter(ch)) uniqueLetters.add(ch);
   }
 
   // Sort by rarity (lower index in FREQ_ORDER = rarer)
@@ -44,7 +48,7 @@ export function getRevealedAtChunk(
 
     // Never-complete: would adding this letter fill every position?
     const testSet = new Set([...autoRevealed, ...guessed, letter]);
-    const allFilled = [...upper].every((ch) => ch === ' ' || testSet.has(ch));
+    const allFilled = [...upper].every((ch) => !isLetter(ch) || testSet.has(ch));
 
     if (allFilled) {
       // Suppress this reveal
@@ -55,5 +59,5 @@ export function getRevealedAtChunk(
   }
 
   // Build the mask
-  return [...upper].map((ch) => ch !== ' ' && autoRevealed.has(ch));
+  return [...upper].map((ch) => isLetter(ch) && autoRevealed.has(ch));
 }
