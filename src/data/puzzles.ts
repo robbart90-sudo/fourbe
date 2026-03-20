@@ -10,7 +10,7 @@ export const hardcodedPuzzles: HardcodedPuzzleEntry[] = [
     date: '2026-03-22',
     puzzle: {
       subject: 'Peyton Manning',
-      subjectArticle: 'Who am I?',
+      subjectArticle: 'Who I Be?',
       rounds: [
         { clue: 'All work and no pay', answer: 'VOLUNTEER', connection: 'College days', round: 1 },
         { clue: '___ and two zig zags, baby that\'s all we need', answer: 'COLT FORTY-FIVE', connection: 'Pro days', round: 2 },
@@ -27,7 +27,7 @@ export const hardcodedPuzzles: HardcodedPuzzleEntry[] = [
     date: '2026-03-23',
     puzzle: {
       subject: 'Abraham Lincoln',
-      subjectArticle: 'Who am I?',
+      subjectArticle: 'Who I Be?',
       rounds: [
         { clue: 'No kindling needed', answer: 'DURAFLAME LOGS', connection: 'Log Cabin Lodger', round: 1 },
         { clue: 'Grappling and throwing, just no punching', answer: 'WRESTLING', connection: 'Unofficial Illinois State Champ', round: 2 },
@@ -44,7 +44,7 @@ export const hardcodedPuzzles: HardcodedPuzzleEntry[] = [
     date: '2026-03-24',
     puzzle: {
       subject: 'Arthur (the Aardvark)',
-      subjectArticle: 'Who am I?',
+      subjectArticle: 'Who I Be?',
       rounds: [
         { clue: 'Unlimited books with a swipe', answer: 'LIBRARY CARD', connection: 'Arthur wrote a song about it', round: 1 },
         { clue: 'Bug ranch?', answer: 'ANT FARM', connection: 'Aardvarks eat ants', round: 2 },
@@ -61,7 +61,7 @@ export const hardcodedPuzzles: HardcodedPuzzleEntry[] = [
     date: '2026-03-25',
     puzzle: {
       subject: "Texas Hold 'Em",
-      subjectArticle: 'What am I?',
+      subjectArticle: 'What I Be?',
       rounds: [
         { clue: 'Slang: when a pop artist fails publicly', answer: 'IN THEIR FLOP ERA', connection: 'Check...', round: 1 },
         { clue: 'The Byrds on Ed Sullivan in 1965', answer: 'TURN TURN TURN', connection: 'Check...', round: 2 },
@@ -78,7 +78,7 @@ export const hardcodedPuzzles: HardcodedPuzzleEntry[] = [
     date: '2026-03-26',
     puzzle: {
       subject: 'The Marianas Trench',
-      subjectArticle: 'What am I?',
+      subjectArticle: 'What I Be?',
       rounds: [
         { clue: 'Movie: LL Cool J sautés a shark', answer: 'DEEP BLUE SEA', connection: 'Going down...', round: 1 },
         { clue: 'A Chicago delicacy', answer: 'DEEP DISH PIZZA', connection: 'Down...', round: 2 },

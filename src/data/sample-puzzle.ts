@@ -2,7 +2,7 @@ import type { Puzzle } from '../types';
 
 export const samplePuzzle: Puzzle = {
   subject: "Dracula",
-  subjectArticle: "Who am I?",
+  subjectArticle: "Who I Be?",
   rounds: [
     {
       clue: "Shade associated with passion or danger",

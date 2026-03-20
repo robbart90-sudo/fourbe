@@ -52,7 +52,7 @@ function AnswerTileRow({ answer, variant, availableWidth }: { answer: string; va
 
   const fontSize = Math.max(9, Math.round(tileSize * 0.45));
   const punctWidth = Math.max(8, Math.round(tileSize * 0.4));
-  const wordGap = tileSize >= 28 ? 8 : 5;
+  const wordGap = tileSize >= 28 ? 14 : 10;
 
   return (
     <div className="flex flex-wrap justify-center" style={{ gap: `3px ${wordGap}px` }}>
@@ -525,7 +525,7 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
     return (
       <><div className="flex flex-col items-center pt-10 pb-16 min-h-[calc(100vh-52px)]">
         <h2 className="text-2xl text-gray-800 text-center mb-10" style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26 }}>
-          {puzzle.subjectArticle?.startsWith('Who') ? "Who's" : "What's"} Today's Fourbe?
+          {puzzle.subjectArticle?.startsWith('Where') ? "Where's" : puzzle.subjectArticle?.startsWith('Who') ? "Who's" : "What's"} Today's Fourbe?
         </h2>
 
         <div className="w-full max-w-md mb-6">
