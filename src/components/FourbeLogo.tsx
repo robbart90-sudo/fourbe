@@ -11,22 +11,22 @@ export function FourbeLogo() {
       {/* Middle row - F vertical stem */}
       <div className="flex gap-1.5">
         <div className="w-14 h-14 bg-[#6aaa64] rounded"></div>
-        <div className="w-14 h-14 border-2 border-[#5b9bd5] rounded"></div>
-        <div className="w-14 h-14 border-2 border-[#5b9bd5] rounded"></div>
+        <div className="w-14 h-14 border-2 border-[#1a1a1b] rounded"></div>
+        <div className="w-14 h-14 border-2 border-[#1a1a1b] rounded"></div>
       </div>
       
       {/* Middle row 2 - F horizontal bar */}
       <div className="flex gap-1.5">
         <div className="w-14 h-14 bg-[#6aaa64] rounded"></div>
         <div className="w-14 h-14 bg-[#6aaa64] rounded"></div>
-        <div className="w-14 h-14 border-2 border-[#5b9bd5] rounded"></div>
+        <div className="w-14 h-14 border-2 border-[#1a1a1b] rounded"></div>
       </div>
       
       {/* Bottom row - F vertical stem */}
       <div className="flex gap-1.5">
         <div className="w-14 h-14 bg-[#6aaa64] rounded"></div>
-        <div className="w-14 h-14 border-2 border-[#5b9bd5] rounded"></div>
-        <div className="w-14 h-14 border-2 border-[#5b9bd5] rounded"></div>
+        <div className="w-14 h-14 border-2 border-[#1a1a1b] rounded"></div>
+        <div className="w-14 h-14 border-2 border-[#1a1a1b] rounded"></div>
       </div>
     </div>
   );
