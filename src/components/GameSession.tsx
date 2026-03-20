@@ -770,10 +770,25 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
           </a>
         )}
 
+        {/* NEXT PUZZLE */}
+        {onNextPuzzle && (
+          <button
+            onClick={nextPuzzleDate ? onNextPuzzle : undefined}
+            disabled={!nextPuzzleDate}
+            className={`w-full mb-3 py-3.5 text-base font-semibold rounded-full transition-colors flex items-center justify-center ${
+              nextPuzzleDate
+                ? 'bg-black text-white cursor-pointer hover:bg-gray-900'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            {nextPuzzleDate ? 'Next Puzzle \u2192' : 'No more puzzles'}
+          </button>
+        )}
+
         {/* SHARE */}
         <button
           onClick={handleShare}
-          className="w-full py-3.5 text-base font-semibold bg-black text-white rounded-full cursor-pointer hover:bg-gray-900 transition-colors flex items-center justify-center gap-2"
+          className="w-full py-3.5 text-base font-semibold rounded-full cursor-pointer transition-colors flex items-center justify-center gap-2 border-2 border-black text-black bg-white hover:bg-gray-50"
         >
           <ShareIcon />
           {shareText}
@@ -786,21 +801,6 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
         >
           Play Again
         </button>
-
-        {/* NEXT PUZZLE (playtesting) */}
-        {onNextPuzzle && (
-          <button
-            onClick={nextPuzzleDate ? onNextPuzzle : undefined}
-            disabled={!nextPuzzleDate}
-            className={`w-full mt-2 text-sm transition-colors text-center ${
-              nextPuzzleDate
-                ? 'text-gray-400 hover:text-gray-600 cursor-pointer'
-                : 'text-gray-300 cursor-not-allowed'
-            }`}
-          >
-            {nextPuzzleDate ? 'Next Puzzle \u2192' : 'No more puzzles'}
-          </button>
-        )}
       </div>
     </div>
   );
