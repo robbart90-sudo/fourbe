@@ -64,7 +64,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background: #ffffff;
   color: #1a1a1b;
-  overflow-x: hidden;
   overscroll-behavior: none;
 }
 

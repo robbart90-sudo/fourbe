@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { Round, RoundResult } from '../types';
 
 const MAX_LIVES = 4;
@@ -7,6 +7,8 @@ const BACKSTOP_DURATION = 300; // 5 minutes in seconds
 const TILE_MAX = 44;
 const TILE_MIN = 28;
 const TILE_GAP = 5;
+const ROOT_MAX_WIDTH = 600;
+const ROOT_PADDING = 32; // #root padding: 0 1rem = 16px each side
 
 function isLetter(ch: string): boolean {
   return ch >= 'A' && ch <= 'Z';
@@ -20,20 +22,19 @@ const KB_ROWS = [
   ['Z','X','C','V','B','N','M'],
 ];
 
-function useContainerWidth(ref: React.RefObject<HTMLElement | null>) {
-  const [width, setWidth] = useState(() => {
-    // SSR-safe initial estimate: viewport minus #root padding, with safety margin
-    if (typeof window === 'undefined') return 400;
-    return Math.min(window.innerWidth - 40, 560); // conservative: extra 8px safety margin
-  });
-  useLayoutEffect(() => {
-    if (!ref.current) return;
-    const measure = () => setWidth(ref.current?.clientWidth ?? 0);
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(ref.current);
-    return () => ro.disconnect();
-  }, [ref]);
+/** Available content width = min(viewport, #root max-width) - padding */
+function getAvailableWidth() {
+  if (typeof window === 'undefined') return 400;
+  return Math.min(window.innerWidth, ROOT_MAX_WIDTH) - ROOT_PADDING;
+}
+
+function useAvailableWidth() {
+  const [width, setWidth] = useState(getAvailableWidth);
+  useEffect(() => {
+    const onResize = () => setWidth(getAvailableWidth());
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
   return width;
 }
 
@@ -54,16 +55,15 @@ export default function GameRound({ round, runningScore = 0, onRoundComplete }: 
   const [depletedLife, setDepletedLife] = useState<number | null>(null);
 
   const upper = round.answer.toUpperCase();
-  const boardRef = useRef<HTMLDivElement>(null);
-  const containerWidth = useContainerWidth(boardRef);
+  const availableWidth = useAvailableWidth();
 
-  // Responsive tile sizing based on longest word and measured container width
+  // Responsive tile sizing based on longest word and available screen width
   const tileSize = useMemo(() => {
     const words = upper.split(' ');
     const longestWord = Math.max(...words.map((w) => [...w].filter(isLetter).length));
-    const maxFit = Math.floor((containerWidth - (longestWord - 1) * TILE_GAP) / longestWord);
+    const maxFit = Math.floor((availableWidth - (longestWord - 1) * TILE_GAP) / longestWord);
     return Math.max(TILE_MIN, Math.min(TILE_MAX, maxFit));
-  }, [upper, containerWidth]);
+  }, [upper, availableWidth]);
 
   const tileFontSize = Math.max(10, Math.round(tileSize * 0.45));
   const punctWidth = Math.max(10, Math.round(tileSize * 0.45));
@@ -229,7 +229,7 @@ export default function GameRound({ round, runningScore = 0, onRoundComplete }: 
       </h2>
 
       {/* Letter board */}
-      <div ref={boardRef} className="mb-6 self-stretch">
+      <div className="mb-6 self-stretch">
         <div className="flex flex-wrap justify-center" style={{ gap: `5px ${wordGap}px` }}>
           {upper.split(' ').reduce<{ elements: React.ReactNode[]; globalIdx: number }>(
             (acc, word, wi, arr) => {
