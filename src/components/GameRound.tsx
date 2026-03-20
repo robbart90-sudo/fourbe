@@ -211,6 +211,10 @@ export default function GameRound({ round, runningScore = 0, onRoundComplete }: 
 
   return (
     <div className="flex flex-col items-center pt-6 pb-16 min-h-[calc(100vh-52px)] relative">
+      {/* Debug: remove after confirming */}
+      <div className="absolute top-0 left-0 text-[10px] text-red-400 font-mono z-50">
+        w:{availableWidth} t:{tileSize}
+      </div>
       {/* Running score */}
       {runningScore > 0 && (
         <div className="absolute top-2 right-0 text-sm text-gray-300 tabular-nums font-sans">
@@ -229,7 +233,7 @@ export default function GameRound({ round, runningScore = 0, onRoundComplete }: 
       </h2>
 
       {/* Letter board */}
-      <div className="mb-6 self-stretch">
+      <div className="mb-6 self-stretch" style={{ maxWidth: 'calc(100vw - 2rem)' }}>
         <div className="flex flex-wrap justify-center" style={{ gap: `5px ${wordGap}px` }}>
           {upper.split(' ').reduce<{ elements: React.ReactNode[]; globalIdx: number }>(
             (acc, word, wi, arr) => {
@@ -256,7 +260,7 @@ export default function GameRound({ round, runningScore = 0, onRoundComplete }: 
                 return (
                   <div
                     key={idx}
-                    className={`flex items-center justify-center font-bold font-sans border-2 select-none transition-colors duration-150
+                    className={`flex items-center justify-center font-bold font-sans border-2 select-none transition-colors duration-150 shrink-0
                       ${isPop ? 'animate-pop' : ''}
                       ${tileClass(ch, idx)}
                     `}
@@ -268,7 +272,7 @@ export default function GameRound({ round, runningScore = 0, onRoundComplete }: 
               });
 
               acc.elements.push(
-                <div key={`word-${wi}`} className="flex" style={{ flexWrap: 'nowrap', gap: TILE_GAP }}>
+                <div key={`word-${wi}`} className="flex" style={{ flexWrap: 'nowrap', gap: TILE_GAP, maxWidth: '100%' }}>
                   {wordElements}
                 </div>
               );
