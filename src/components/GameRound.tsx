@@ -1,9 +1,13 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { Round, RoundResult } from '../types';
 
 const MAX_LIVES = 4;
 const POINTS_PER_LIFE = 250;
 const BACKSTOP_DURATION = 300; // 5 minutes in seconds
+const TILE_MAX = 44;
+const TILE_MIN = 20;
+const TILE_GAP = 5;
+const PAGE_PAD = 16;
 
 function isLetter(ch: string): boolean {
   return ch >= 'A' && ch <= 'Z';
@@ -16,6 +20,16 @@ const KB_ROWS = [
   ['A','S','D','F','G','H','J','K','L'],
   ['Z','X','C','V','B','N','M'],
 ];
+
+function useWindowWidth() {
+  const [width, setWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 500);
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return width;
+}
 
 interface GameRoundProps {
   round: Round;
@@ -34,6 +48,20 @@ export default function GameRound({ round, runningScore = 0, onRoundComplete }: 
   const [depletedLife, setDepletedLife] = useState<number | null>(null);
 
   const upper = round.answer.toUpperCase();
+  const windowWidth = useWindowWidth();
+
+  // Responsive tile sizing based on longest word
+  const tileSize = useMemo(() => {
+    const words = upper.split(' ');
+    const longestWord = Math.max(...words.map((w) => w.length));
+    const available = windowWidth - PAGE_PAD * 2;
+    const maxFit = Math.floor((available - (longestWord - 1) * TILE_GAP) / longestWord);
+    return Math.max(TILE_MIN, Math.min(TILE_MAX, maxFit));
+  }, [upper, windowWidth]);
+
+  const tileFontSize = Math.max(10, Math.round(tileSize * 0.45));
+  const punctWidth = Math.max(10, Math.round(tileSize * 0.45));
+  const wordGap = tileSize >= 36 ? 12 : 8;
 
   // Build reveal mask — only A-Z letter positions are guessable
   const revealMask = [...upper].map((ch) => {
@@ -190,13 +218,13 @@ export default function GameRound({ round, runningScore = 0, onRoundComplete }: 
       </div>
 
       {/* Clue */}
-      <h2 className="font-serif text-xl text-center text-gray-700 italic mb-3 max-w-md leading-relaxed min-h-[2.5rem]">
+      <h2 className="font-serif text-xl text-center text-gray-700 italic mb-3 max-w-md leading-relaxed min-h-[2.5rem] px-4">
         {round.clue}
       </h2>
 
       {/* Letter board */}
       <div className="mb-6">
-        <div className="flex flex-wrap justify-center gap-[5px]" style={{ rowGap: '5px' }}>
+        <div className="flex flex-wrap justify-center" style={{ gap: `5px ${wordGap}px` }}>
           {upper.split(' ').reduce<{ elements: React.ReactNode[]; globalIdx: number }>(
             (acc, word, wi, arr) => {
               const startIdx = acc.globalIdx;
@@ -208,7 +236,8 @@ export default function GameRound({ round, runningScore = 0, onRoundComplete }: 
                   return (
                     <div
                       key={idx}
-                      className="w-5 h-11 flex items-center justify-center text-lg font-bold font-sans text-gray-500 select-none"
+                      className="flex items-center justify-center font-bold font-sans text-gray-500 select-none"
+                      style={{ width: punctWidth, height: tileSize, fontSize: tileFontSize }}
                     >
                       {ch}
                     </div>
@@ -221,10 +250,11 @@ export default function GameRound({ round, runningScore = 0, onRoundComplete }: 
                 return (
                   <div
                     key={idx}
-                    className={`w-11 h-11 flex items-center justify-center text-lg font-bold font-sans border-2 select-none transition-colors duration-150
+                    className={`flex items-center justify-center font-bold font-sans border-2 select-none transition-colors duration-150
                       ${isPop ? 'animate-pop' : ''}
                       ${tileClass(ch, idx)}
                     `}
+                    style={{ width: tileSize, height: tileSize, fontSize: tileFontSize }}
                   >
                     {isVisible ? ch : ''}
                   </div>
@@ -232,13 +262,10 @@ export default function GameRound({ round, runningScore = 0, onRoundComplete }: 
               });
 
               acc.elements.push(
-                <div key={`word-${wi}`} className="flex gap-[5px]" style={{ flexWrap: 'nowrap' }}>
+                <div key={`word-${wi}`} className="flex" style={{ flexWrap: 'nowrap', gap: TILE_GAP }}>
                   {wordElements}
                 </div>
               );
-              if (wi < arr.length - 1) {
-                acc.elements.push(<div key={`space-${wi}`} className="w-2" />);
-              }
               acc.globalIdx += word.length + 1;
               return acc;
             },
@@ -269,7 +296,7 @@ export default function GameRound({ round, runningScore = 0, onRoundComplete }: 
 
       {/* On-screen keyboard */}
       {state === 'playing' && (
-        <div className="w-full max-w-md select-none">
+        <div className="w-full max-w-md px-1 select-none">
           {KB_ROWS.map((row, ri) => (
             <div key={ri} className="flex justify-center gap-[6px] mb-[6px]">
               {row.map((letter) => {
@@ -282,7 +309,7 @@ export default function GameRound({ round, runningScore = 0, onRoundComplete }: 
                     key={letter}
                     onClick={() => handleLetterGuess(letter)}
                     disabled={isGuessed || isWrong}
-                    className={`w-9 h-11 ${keyClasses(letter)} ${isWobbling ? 'animate-wobble' : ''}`}
+                    className={`min-w-0 flex-1 max-w-9 h-11 ${keyClasses(letter)} ${isWobbling ? 'animate-wobble' : ''}`}
                   >
                     {letter}
                   </button>
