@@ -61,7 +61,7 @@ export const hardcodedPuzzles: HardcodedPuzzleEntry[] = [
     date: '2026-03-25',
     puzzle: {
       subject: "Texas Hold 'Em",
-      subjectArticle: 'Who am I?',
+      subjectArticle: 'What am I?',
       rounds: [
         { clue: 'Slang: when a pop artist fails publicly', answer: 'IN THEIR FLOP ERA', connection: 'Check...', round: 1 },
         { clue: 'The Byrds on Ed Sullivan in 1965', answer: 'TURN TURN TURN', connection: 'Check...', round: 2 },
@@ -78,7 +78,7 @@ export const hardcodedPuzzles: HardcodedPuzzleEntry[] = [
     date: '2026-03-26',
     puzzle: {
       subject: 'The Marianas Trench',
-      subjectArticle: 'Who am I?',
+      subjectArticle: 'What am I?',
       rounds: [
         { clue: 'Movie: LL Cool J sautés a shark', answer: 'DEEP BLUE SEA', connection: 'Going down...', round: 1 },
         { clue: 'A Chicago delicacy', answer: 'DEEP DISH PIZZA', connection: 'Down...', round: 2 },

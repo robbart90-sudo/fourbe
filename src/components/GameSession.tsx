@@ -525,7 +525,7 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
     return (
       <><div className="flex flex-col items-center pt-10 pb-16 min-h-[calc(100vh-52px)]">
         <h2 className="text-2xl text-gray-800 text-center mb-10" style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26 }}>
-          What's Today's Fourbe?
+          {puzzle.subjectArticle?.startsWith('Who') ? "Who's" : "What's"} Today's Fourbe?
         </h2>
 
         <div className="w-full max-w-md mb-6">
