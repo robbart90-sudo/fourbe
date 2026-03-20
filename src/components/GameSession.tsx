@@ -196,6 +196,34 @@ function ScoreBar({
   );
 }
 
+function LeaveConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onCancel}>
+      <div
+        className="bg-white rounded-xl shadow-lg p-6 mx-4 max-w-xs w-full text-center animate-fade-in"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className="text-lg font-semibold text-gray-800 mb-1">Leave game?</p>
+        <p className="text-sm text-gray-500 mb-5">Your progress will be lost.</p>
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 py-2.5 text-sm font-semibold text-white bg-black rounded-lg cursor-pointer hover:bg-gray-900 transition-colors"
+          >
+            Leave
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNextPuzzle }: { puzzle: Puzzle; dateSelector?: React.ReactNode; nextPuzzleDate?: string | null; onNextPuzzle?: () => void }) {
   const availableWidth = useAvailableWidth();
   const [phase, setPhase] = useState<SessionPhase>('start');
@@ -220,6 +248,9 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
     setShowHtp(false);
     localStorage.setItem(HTP_SEEN_KEY, '1');
   }, []);
+
+  // Leave-game confirmation modal
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
   // Reveal animation step (0 = nothing visible, 1-7 = staggered elements)
   const [revealStep, setRevealStep] = useState(0);
@@ -358,6 +389,19 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
     return () => timers.forEach(clearTimeout);
   }, [phase]);
 
+  // --- "Fourbe" nav click → return to start (with confirmation if mid-game) ---
+  useEffect(() => {
+    const handleGoHome = () => {
+      if (phase === 'playing' || phase === 'final-guess') {
+        setShowLeaveConfirm(true);
+      } else {
+        handlePlayAgain();
+      }
+    };
+    window.addEventListener('fourbe-go-home', handleGoHome);
+    return () => window.removeEventListener('fourbe-go-home', handleGoHome);
+  }, [phase]);
+
   const handleFinalSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     handleFinalGuessSubmit(finalGuess);
@@ -457,12 +501,20 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
   // ===========================================
   if (phase === 'playing') {
     return (
-      <GameRound
-        key={currentRoundIdx}
-        round={round}
-        runningScore={runningScore}
-        onRoundComplete={handleRoundComplete}
-      />
+      <>
+        <GameRound
+          key={currentRoundIdx}
+          round={round}
+          runningScore={runningScore}
+          onRoundComplete={handleRoundComplete}
+        />
+        {showLeaveConfirm && (
+          <LeaveConfirmModal
+            onConfirm={() => { setShowLeaveConfirm(false); handlePlayAgain(); }}
+            onCancel={() => setShowLeaveConfirm(false)}
+          />
+        )}
+      </>
     );
   }
 
@@ -471,7 +523,7 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
   // ===========================================
   if (phase === 'final-guess') {
     return (
-      <div className="flex flex-col items-center pt-10 pb-16 min-h-[calc(100vh-52px)]">
+      <><div className="flex flex-col items-center pt-10 pb-16 min-h-[calc(100vh-52px)]">
         <h2 className="text-2xl text-gray-800 text-center mb-10" style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26 }}>
           What's Today's Fourbe?
         </h2>
@@ -537,6 +589,13 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
           </div>
         </div>
       </div>
+        {showLeaveConfirm && (
+          <LeaveConfirmModal
+            onConfirm={() => { setShowLeaveConfirm(false); handlePlayAgain(); }}
+            onCancel={() => setShowLeaveConfirm(false)}
+          />
+        )}
+      </>
     );
   }
 

@@ -19,7 +19,7 @@ export default function Play() {
   const defaultDate = useMemo(() => {
     const today = todayString();
     if (allDates.includes(today)) return today;
-    if (allDates.length > 0) return allDates[allDates.length - 1];
+    if (allDates.length > 0) return allDates[0];
     return today;
   }, [allDates]);
 
