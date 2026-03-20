@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { Puzzle, RoundResult } from '../types';
 import GameRound from './GameRound';
 import { FourbeLogo } from './FourbeLogo';
@@ -7,6 +7,10 @@ import { judgeGuess } from '../lib/judge';
 import { playPerfectJingle, playKindOfSound, playFailSound } from '../lib/sounds';
 
 const HTP_SEEN_KEY = 'fourbe-played-before';
+const TILE_MAX_SM = 36;
+const TILE_MIN_SM = 18;
+const TILE_GAP_SM = 3;
+const PAGE_PAD = 16;
 
 type SessionPhase = 'start' | 'playing' | 'final-guess' | 'reveal';
 type FinalJudgment = 'Perfect!' | 'Kind Of!' | 'Not Quite...' | 'Time!';
@@ -15,40 +19,59 @@ function isLetter(ch: string): boolean {
   return ch >= 'A' && ch <= 'Z';
 }
 
+function useWindowWidth() {
+  const [width, setWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 500);
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return width;
+}
+
 // --- Shared tile row for displaying answers ---
-function AnswerTileRow({ answer, variant }: { answer: string; variant: 'solved' | 'failed' }) {
+function AnswerTileRow({ answer, variant, windowWidth }: { answer: string; variant: 'solved' | 'failed'; windowWidth: number }) {
   const upper = answer.toUpperCase();
   const tileClass = variant === 'solved'
     ? 'border-player bg-player text-white'
     : 'border-gray-300 bg-gray-100 text-gray-400';
 
+  const tileSize = useMemo(() => {
+    const words = upper.split(' ');
+    const longestWord = Math.max(...words.map((w) => [...w].filter(isLetter).length));
+    const available = windowWidth - PAGE_PAD * 2;
+    const maxFit = Math.floor((available - (longestWord - 1) * TILE_GAP_SM) / longestWord);
+    return Math.max(TILE_MIN_SM, Math.min(TILE_MAX_SM, maxFit));
+  }, [upper, windowWidth]);
+
+  const fontSize = Math.max(9, Math.round(tileSize * 0.45));
+  const punctWidth = Math.max(8, Math.round(tileSize * 0.4));
+  const wordGap = tileSize >= 28 ? 8 : 5;
+
   return (
-    <div className="flex flex-wrap justify-center gap-[3px]" style={{ rowGap: '3px' }}>
-      {upper.split(' ').map((word, wi, arr) => (
-        <React.Fragment key={wi}>
-          <div className="flex gap-[3px]" style={{ flexWrap: 'nowrap' }}>
-            {[...word].map((ch, ci) =>
-              isLetter(ch) ? (
-                <div
-                  key={ci}
-                  className={`w-[36px] h-[36px] flex items-center justify-center font-bold font-sans border-2 select-none ${tileClass}`}
-                  style={{ fontSize: 16 }}
-                >
-                  {ch}
-                </div>
-              ) : (
-                <div
-                  key={ci}
-                  className="w-4 h-[36px] flex items-center justify-center font-bold font-sans text-gray-500 select-none"
-                  style={{ fontSize: 16 }}
-                >
-                  {ch}
-                </div>
-              )
-            )}
-          </div>
-          {wi < arr.length - 1 && <div className="w-1.5" />}
-        </React.Fragment>
+    <div className="flex flex-wrap justify-center" style={{ gap: `3px ${wordGap}px` }}>
+      {upper.split(' ').map((word, wi) => (
+        <div key={wi} className="flex" style={{ flexWrap: 'nowrap', gap: TILE_GAP_SM }}>
+          {[...word].map((ch, ci) =>
+            isLetter(ch) ? (
+              <div
+                key={ci}
+                className={`flex items-center justify-center font-bold font-sans border-2 select-none ${tileClass}`}
+                style={{ width: tileSize, height: tileSize, fontSize }}
+              >
+                {ch}
+              </div>
+            ) : (
+              <div
+                key={ci}
+                className="flex items-center justify-center font-bold font-sans text-gray-500 select-none"
+                style={{ width: punctWidth, height: tileSize, fontSize }}
+              >
+                {ch}
+              </div>
+            )
+          )}
+        </div>
       ))}
     </div>
   );
@@ -168,6 +191,7 @@ function ScoreBar({
 }
 
 export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNextPuzzle }: { puzzle: Puzzle; dateSelector?: React.ReactNode; nextPuzzleDate?: string | null; onNextPuzzle?: () => void }) {
+  const windowWidth = useWindowWidth();
   const [phase, setPhase] = useState<SessionPhase>('start');
   const [currentRoundIdx, setCurrentRoundIdx] = useState(0);
   const [results, setResults] = useState<RoundResult[]>([]);
@@ -435,7 +459,7 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
                   Round {r.round}
                 </div>
                 {solved ? (
-                  <AnswerTileRow answer={r.answer} variant="solved" />
+                  <AnswerTileRow answer={r.answer} variant="solved" windowWidth={windowWidth} />
                 ) : (
                   <p className="text-lg font-bold font-sans text-gray-300 tracking-wide">???</p>
                 )}
@@ -613,7 +637,7 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
                   {roundScore > 0 ? roundScore.toLocaleString() : '0'} pts
                 </span>
               </div>
-              <AnswerTileRow answer={r.answer} variant={solved ? 'solved' : 'failed'} />
+              <AnswerTileRow answer={r.answer} variant={solved ? 'solved' : 'failed'} windowWidth={windowWidth} />
               <p className={`text-sm italic mt-2 ${
                 solved ? 'text-green-700' : 'text-gray-400'
               }`}>
