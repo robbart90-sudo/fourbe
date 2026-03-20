@@ -211,10 +211,6 @@ export default function GameRound({ round, runningScore = 0, onRoundComplete }: 
 
   return (
     <div className="flex flex-col items-center pt-6 pb-16 min-h-[calc(100vh-52px)] relative">
-      {/* Debug: remove after confirming */}
-      <div className="absolute top-0 left-0 text-[10px] text-red-400 font-mono z-50">
-        w:{availableWidth} t:{tileSize}
-      </div>
       {/* Running score */}
       {runningScore > 0 && (
         <div className="absolute top-2 right-0 text-sm text-gray-300 tabular-nums font-sans">
