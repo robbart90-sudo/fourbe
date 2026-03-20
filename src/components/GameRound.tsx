@@ -236,7 +236,7 @@ export default function GameRound({ round, runningScore = 0, onRoundComplete }: 
       <div className="mb-6 self-stretch" style={{ maxWidth: 'calc(100vw - 2rem)' }}>
         <div className="flex flex-wrap justify-center" style={{ gap: `5px ${wordGap}px` }}>
           {upper.split(' ').reduce<{ elements: React.ReactNode[]; globalIdx: number }>(
-            (acc, word, wi, arr) => {
+            (acc, word, wi) => {
               const startIdx = acc.globalIdx;
               const wordElements = [...word].map((ch, li) => {
                 const idx = startIdx + li;

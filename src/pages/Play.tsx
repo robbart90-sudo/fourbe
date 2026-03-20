@@ -5,11 +5,6 @@ import { hardcodedPuzzles, getHardcodedPuzzle } from '../data/puzzles';
 import { loadPuzzle, listSavedPuzzles, todayString } from '../lib/puzzle-storage';
 import type { Puzzle } from '../types';
 
-function formatDateLabel(dateStr: string): string {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const date = new Date(y, m - 1, d);
-  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-}
 
 export default function Play() {
   // Merge hardcoded + localStorage dates, deduplicated, sorted ascending

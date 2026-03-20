@@ -561,7 +561,7 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
   });
 
   return (
-    <div ref={sessionRef} className="flex flex-col items-center pt-12 pb-16 min-h-[calc(100vh-52px)]">
+    <div className="flex flex-col items-center pt-12 pb-16 min-h-[calc(100vh-52px)]">
 
       {/* 1. JUDGMENT WORD — biggest, boldest */}
       <p
