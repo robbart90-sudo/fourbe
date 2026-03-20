@@ -154,7 +154,7 @@ function ScoreBar({
             <span
               key={i}
               className={`inline-block w-[7px] h-[7px] rounded-full ${
-                i < lives ? 'bg-[#3a7bd5]' : 'border border-gray-300'
+                i < lives ? 'bg-[#1a1a1b]' : 'border border-gray-300'
               }`}
             />
           ))}

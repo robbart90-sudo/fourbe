@@ -258,7 +258,7 @@ export default function GameRound({ round, runningScore = 0, onRoundComplete }: 
                 key={i}
                 className={`w-[13px] h-[13px] rounded-full transition-all duration-300 ${
                   isFilled
-                    ? 'bg-[#3a7bd5] scale-100'
+                    ? 'bg-[#1a1a1b] scale-100'
                     : 'border-2 border-gray-300 scale-90'
                 } ${justDepleted ? 'animate-wobble' : ''}`}
               />
@@ -302,7 +302,7 @@ export default function GameRound({ round, runningScore = 0, onRoundComplete }: 
                 {Array.from({ length: MAX_LIVES }, (_, i) => (
                   <div
                     key={i}
-                    className={`w-[13px] h-[13px] rounded-full ${i < lives ? 'bg-[#3a7bd5]' : 'border-2 border-gray-300'}`}
+                    className={`w-[13px] h-[13px] rounded-full ${i < lives ? 'bg-[#1a1a1b]' : 'border-2 border-gray-300'}`}
                   />
                 ))}
               </div>
