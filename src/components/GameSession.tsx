@@ -21,8 +21,8 @@ function isLetter(ch: string): boolean {
 
 function useContainerWidth(ref: React.RefObject<HTMLElement | null>) {
   const [width, setWidth] = useState(() => {
-    if (typeof window === 'undefined') return 500;
-    return Math.min(window.innerWidth - 32, 600 - 32);
+    if (typeof window === 'undefined') return 400;
+    return Math.min(window.innerWidth - 40, 560);
   });
   useLayoutEffect(() => {
     if (!ref.current) return;

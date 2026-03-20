@@ -22,9 +22,9 @@ const KB_ROWS = [
 
 function useContainerWidth(ref: React.RefObject<HTMLElement | null>) {
   const [width, setWidth] = useState(() => {
-    // SSR-safe initial estimate: viewport width minus #root padding (1rem each side)
-    if (typeof window === 'undefined') return 500;
-    return Math.min(window.innerWidth - 32, 600 - 32); // 600 = #root max-width, 32 = 2×16px padding
+    // SSR-safe initial estimate: viewport minus #root padding, with safety margin
+    if (typeof window === 'undefined') return 400;
+    return Math.min(window.innerWidth - 40, 560); // conservative: extra 8px safety margin
   });
   useLayoutEffect(() => {
     if (!ref.current) return;
