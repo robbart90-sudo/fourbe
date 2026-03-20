@@ -80,11 +80,11 @@ export default function HowToPlayModal({ onClose }: { onClose: () => void }) {
           <ul className="space-y-4 mb-10 mt-6 font-sans font-medium text-gray-900" style={{ fontSize: 16, lineHeight: 1.65 }}>
             <li className="flex items-baseline gap-3">
               <span className="shrink-0" style={{ fontSize: 8, position: 'relative', top: -2 }}>&bull;</span>
-              <span>Each round reveals a clue. Guess letters to solve and score before time runs out.</span>
+              <span>Guess letters to solve a clue each round.</span>
             </li>
             <li className="flex items-baseline gap-3">
               <span className="shrink-0" style={{ fontSize: 8, position: 'relative', top: -2 }}>&bull;</span>
-              <span>All four answers partially describe one hidden subject.</span>
+              <span>All four clues partially describe one hidden subject.</span>
             </li>
           </ul>
 
