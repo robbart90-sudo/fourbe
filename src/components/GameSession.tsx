@@ -20,7 +20,10 @@ function isLetter(ch: string): boolean {
 }
 
 function useContainerWidth(ref: React.RefObject<HTMLElement | null>) {
-  const [width, setWidth] = useState(0);
+  const [width, setWidth] = useState(() => {
+    if (typeof window === 'undefined') return 500;
+    return Math.min(window.innerWidth - 32, 600 - 32);
+  });
   useLayoutEffect(() => {
     if (!ref.current) return;
     const measure = () => setWidth(ref.current?.clientWidth ?? 0);
@@ -40,7 +43,6 @@ function AnswerTileRow({ answer, variant, containerWidth }: { answer: string; va
     : 'border-gray-300 bg-gray-100 text-gray-400';
 
   const tileSize = useMemo(() => {
-    if (containerWidth === 0) return TILE_MAX_SM;
     const words = upper.split(' ');
     const longestWord = Math.max(...words.map((w) => [...w].filter(isLetter).length));
     const maxFit = Math.floor((containerWidth - (longestWord - 1) * TILE_GAP_SM) / longestWord);

@@ -7,7 +7,6 @@ const BACKSTOP_DURATION = 300; // 5 minutes in seconds
 const TILE_MAX = 44;
 const TILE_MIN = 28;
 const TILE_GAP = 5;
-const TILE_BORDER = 4; // border-2 = 2px each side = 4px total
 
 function isLetter(ch: string): boolean {
   return ch >= 'A' && ch <= 'Z';
@@ -22,7 +21,11 @@ const KB_ROWS = [
 ];
 
 function useContainerWidth(ref: React.RefObject<HTMLElement | null>) {
-  const [width, setWidth] = useState(0);
+  const [width, setWidth] = useState(() => {
+    // SSR-safe initial estimate: viewport width minus #root padding (1rem each side)
+    if (typeof window === 'undefined') return 500;
+    return Math.min(window.innerWidth - 32, 600 - 32); // 600 = #root max-width, 32 = 2×16px padding
+  });
   useLayoutEffect(() => {
     if (!ref.current) return;
     const measure = () => setWidth(ref.current?.clientWidth ?? 0);
@@ -56,10 +59,8 @@ export default function GameRound({ round, runningScore = 0, onRoundComplete }: 
 
   // Responsive tile sizing based on longest word and measured container width
   const tileSize = useMemo(() => {
-    if (containerWidth === 0) return TILE_MAX; // initial render before measurement
     const words = upper.split(' ');
     const longestWord = Math.max(...words.map((w) => [...w].filter(isLetter).length));
-    // Each tile occupies tileSize (border-box, includes border) + gap between tiles
     const maxFit = Math.floor((containerWidth - (longestWord - 1) * TILE_GAP) / longestWord);
     return Math.max(TILE_MIN, Math.min(TILE_MAX, maxFit));
   }, [upper, containerWidth]);
@@ -228,7 +229,7 @@ export default function GameRound({ round, runningScore = 0, onRoundComplete }: 
       </h2>
 
       {/* Letter board */}
-      <div ref={boardRef} className="mb-6 w-full">
+      <div ref={boardRef} className="mb-6 self-stretch">
         <div className="flex flex-wrap justify-center" style={{ gap: `5px ${wordGap}px` }}>
           {upper.split(' ').reduce<{ elements: React.ReactNode[]; globalIdx: number }>(
             (acc, word, wi, arr) => {
