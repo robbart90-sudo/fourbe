@@ -15,7 +15,7 @@ export const hardcodedPuzzles: HardcodedPuzzleEntry[] = [
         { clue: 'All work and no pay', answer: 'VOLUNTEER', connection: 'College days', round: 1 },
         { clue: '___ and two zig zags, baby that\'s all we need', answer: 'COLT FORTY-FIVE', connection: 'Pro days', round: 2 },
         { clue: "Warren Buffett's notable nickname", answer: 'THE WIZARD OF OMAHA', connection: 'Audible plays', round: 3 },
-        { clue: 'Paying $1 on a .75 bill', answer: 'QUARTERBACK', connection: 'Positional ways', round: 4 },
+        { clue: 'Paying $1 on a .75¢ bill', answer: 'QUARTERBACK', connection: 'Positional ways', round: 4 },
       ],
       acceptList: {
         perfect: ['Peyton Manning', 'Peyton', 'Manning', 'Peyton Williams Manning'],
