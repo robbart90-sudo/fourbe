@@ -196,7 +196,7 @@ export default function GameRound({ round, runningScore = 0, onRoundComplete }: 
 
       {/* Letter board */}
       <div className="mb-6">
-        <div className="flex flex-wrap justify-start gap-[5px]" style={{ rowGap: '5px' }}>
+        <div className="flex flex-wrap justify-center gap-[5px]" style={{ rowGap: '5px' }}>
           {upper.split(' ').reduce<{ elements: React.ReactNode[]; globalIdx: number }>(
             (acc, word, wi, arr) => {
               const startIdx = acc.globalIdx;
