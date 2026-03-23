@@ -3,8 +3,23 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import './index.css';
 import Play from './pages/Play';
+import { ComingSoon } from './components/ComingSoon';
 
 const Editor = lazy(() => import('./pages/Editor'));
+
+const PLAYTEST_KEY = 'fourbe-playtest';
+const PLAYTEST_CODE = 'fourbe2026';
+
+function checkPlaytestAccess(): boolean {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('playtest') === PLAYTEST_CODE) {
+    localStorage.setItem(PLAYTEST_KEY, 'true');
+    return true;
+  }
+  return localStorage.getItem(PLAYTEST_KEY) === 'true';
+}
+
+const hasAccess = checkPlaytestAccess();
 
 function Nav() {
   return (
@@ -22,20 +37,24 @@ function Nav() {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
-      <Nav />
-      <Routes>
-        <Route path="/" element={<Play />} />
-        <Route path="/play" element={<Play />} />
-        <Route
-          path="/editor"
-          element={
-            <Suspense fallback={null}>
-              <Editor />
-            </Suspense>
-          }
-        />
-      </Routes>
-    </BrowserRouter>
+    {hasAccess ? (
+      <BrowserRouter>
+        <Nav />
+        <Routes>
+          <Route path="/" element={<Play />} />
+          <Route path="/play" element={<Play />} />
+          <Route
+            path="/editor"
+            element={
+              <Suspense fallback={null}>
+                <Editor />
+              </Suspense>
+            }
+          />
+        </Routes>
+      </BrowserRouter>
+    ) : (
+      <ComingSoon />
+    )}
   </StrictMode>,
 );
