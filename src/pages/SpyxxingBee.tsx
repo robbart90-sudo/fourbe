@@ -116,6 +116,7 @@ export default function SpyxxingBee() {
   const isDraggingRef = useRef(false);
   const dragPathRef = useRef<CellCoord[]>([]);
   const pointerStartRef = useRef<{ x: number; y: number; r: number; c: number } | null>(null);
+  const scoredMidSwipeRef = useRef(false);
 
   const DRAG_THRESHOLD = 5;
 
@@ -353,6 +354,7 @@ export default function SpyxxingBee() {
 
     pointerStartRef.current = { x: e.clientX, y: e.clientY, r: cell.r, c: cell.c };
     isDraggingRef.current = false;
+    scoredMidSwipeRef.current = false;
     dragPathRef.current = [{ r: cell.r, c: cell.c }];
     setDragPath([{ r: cell.r, c: cell.c }]);
   }, [getCellFromPoint]);
@@ -410,20 +412,41 @@ export default function SpyxxingBee() {
     if (path.some(p => p.r === cell.r && p.c === cell.c)) return;
 
     const newPath = [...path, { r: cell.r, c: cell.c }];
+
+    // Check for word match instantly on every new cell
+    const matched = checkWordMatch(newPath);
+    if (matched) {
+      fireWordFound(matched);
+      scoredMidSwipeRef.current = true;
+      // Start a new path from the current cell so player can chain
+      const fresh = [{ r: cell.r, c: cell.c }];
+      dragPathRef.current = fresh;
+      setDragPath(fresh);
+      // Reset pointer start so drag threshold doesn't re-trigger
+      pointerStartRef.current = { x: e.clientX, y: e.clientY, r: cell.r, c: cell.c };
+      return;
+    }
+
     dragPathRef.current = newPath;
     setDragPath(newPath);
-  }, [getCellFromPoint]);
+  }, [getCellFromPoint, checkWordMatch, fireWordFound]);
 
   const handleGridPointerUp = useCallback((e: React.PointerEvent) => {
     if (!pointerStartRef.current) return;
 
     const startCell = pointerStartRef.current;
     const wasDragging = isDraggingRef.current;
+    const scoredMidSwipe = scoredMidSwipeRef.current;
 
     pointerStartRef.current = null;
     isDraggingRef.current = false;
+    scoredMidSwipeRef.current = false;
 
-    if (wasDragging) {
+    if (scoredMidSwipe) {
+      // Word already scored mid-swipe — just clear any partial new path
+      dragPathRef.current = [];
+      setDragPath([]);
+    } else if (wasDragging) {
       const path = dragPathRef.current;
       const matched = checkWordMatch(path);
       if (matched) {
@@ -446,6 +469,7 @@ export default function SpyxxingBee() {
   const handleGridPointerCancel = useCallback(() => {
     pointerStartRef.current = null;
     isDraggingRef.current = false;
+    scoredMidSwipeRef.current = false;
     dragPathRef.current = [];
     setDragPath([]);
   }, []);
