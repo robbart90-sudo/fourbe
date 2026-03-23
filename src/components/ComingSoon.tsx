@@ -53,7 +53,7 @@ export function ComingSoon() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
             <input
               type="email"
-              placeholder="Get notified when we launch"
+              placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded text-sm focus:outline-none focus:border-[#6aaa64]"
