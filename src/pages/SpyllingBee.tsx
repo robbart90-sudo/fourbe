@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import WordSearch from '@blex41/word-search';
 
 interface WordPath {
@@ -17,12 +17,12 @@ type CellState = 'hidden' | 'revealed' | 'found' | 'adjacent';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type WordSearchInstance = any;
 
-const DICTIONARY = ["BACON", "EGGS", "TOAST", "COFFEE", "JUICE", "WAFFLE", "CEREAL", "PANCAKE"];
+const DICTIONARY = ["BACON", "EGGS", "TOAST", "COFFEE", "WAFFLE", "CEREAL"];
 const THEME_NAME = 'Breakfast';
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 const HTP_SEEN_KEY = 'spylling-bee-played-before';
-const ROWS = 12;
-const COLS = 12;
+const ROWS = 10;
+const COLS = 10;
 const MAX_SELECTED = 3;
 const REVEAL_DURATION = 8000;
 const REDACT_BAR_MS = 200;
@@ -101,7 +101,8 @@ export default function SpyllingBee() {
   const [selectedLetters, setSelectedLetters] = useState<string[]>([]);
   const [redactingCells, setRedactingCells] = useState<Map<string, number>>(new Map());
   const [tapSequence, setTapSequence] = useState<CellCoord[]>([]);
-  const [flickering, setFlickering] = useState(false);
+  const [dragPath, setDragPath] = useState<CellCoord[]>([]);
+  const [failingCells, setFailingCells] = useState<Set<string>>(new Set());
   const [flareSet, setFlareSet] = useState<Set<string>>(new Set());
   const [elapsed, setElapsed] = useState(0);
   const [gameOver, setGameOver] = useState(false);
@@ -109,13 +110,21 @@ export default function SpyllingBee() {
   const [revealActive, setRevealActive] = useState(false);
   const [phase, setPhase] = useState<'start' | 'playing'>('start');
   const [showHtp, setShowHtp] = useState(() => !localStorage.getItem(HTP_SEEN_KEY));
+  const [trailPoints, setTrailPoints] = useState<{ x: number; y: number }[]>([]);
   const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const failTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const wordsRef = useRef<PlacedWord[]>([]);
   const foundWordsRef = useRef<Set<string>>(new Set());
   const tapSequenceRef = useRef<CellCoord[]>([]);
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  const isDraggingRef = useRef(false);
+  const dragPathRef = useRef<CellCoord[]>([]);
+  const pointerStartRef = useRef<{ x: number; y: number; r: number; c: number } | null>(null);
+
+  const DRAG_THRESHOLD = 5;
 
   const initGame = useCallback(() => {
     const { grid: newGrid, words: newWords } = generateGrid();
@@ -132,18 +141,23 @@ export default function SpyllingBee() {
     setSelectedLetters([]);
     setTapSequence([]);
     tapSequenceRef.current = [];
+    setDragPath([]);
+    dragPathRef.current = [];
+    setFailingCells(new Set());
     setRedactingCells(new Map());
-    setFlickering(false);
     setFlareSet(new Set());
     setRevealActive(false);
     setElapsed(0);
     setGameOver(false);
     setFinalTime(0);
+    pointerStartRef.current = null;
+    isDraggingRef.current = false;
 
     // Clear any lingering timers
     if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
     if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
     if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+    if (failTimerRef.current) clearTimeout(failTimerRef.current);
     if (intervalRef.current) clearInterval(intervalRef.current);
 
     // Start timer
@@ -169,6 +183,7 @@ export default function SpyllingBee() {
       if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
       if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
       if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+      if (failTimerRef.current) clearTimeout(failTimerRef.current);
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, []);
@@ -177,37 +192,85 @@ export default function SpyllingBee() {
   useEffect(() => {
     foundWordsRef.current = foundWords;
     if (words.length > 0 && foundWords.size === words.length) {
-      // Win!
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
       setFinalTime(elapsed);
-      // Small delay so the last flare animation plays
       setTimeout(() => setGameOver(true), 600);
     }
   }, [foundWords, words.length, elapsed]);
 
-  const flickerAndClear = useCallback(() => {
-    setFlickering(true);
-    setTimeout(() => {
-      setFlickering(false);
-      tapSequenceRef.current = [];
-      setTapSequence([]);
-    }, 150);
-  }, []);
+  // Compute SVG trail points when active path changes
+  useLayoutEffect(() => {
+    const g = gridRef.current;
+    if (!g) { setTrailPoints([]); return; }
+    const activePath = dragPath.length > 0 ? dragPath : tapSequence;
+    if (activePath.length < 2) { setTrailPoints([]); return; }
+
+    const gridRect = g.getBoundingClientRect();
+    const pts = activePath.map(({ r, c }) => {
+      const cell = g.querySelector(`[data-row="${r}"][data-col="${c}"]`) as HTMLElement | null;
+      if (!cell) return null;
+      const cr = cell.getBoundingClientRect();
+      return { x: cr.left + cr.width / 2 - gridRect.left, y: cr.top + cr.height / 2 - gridRect.top };
+    }).filter(Boolean) as { x: number; y: number }[];
+    setTrailPoints(pts);
+  }, [dragPath, tapSequence]);
+
+  // ── Shared helpers ──
 
   const checkWordMatch = useCallback((sequence: CellCoord[]): PlacedWord | null => {
     for (const word of wordsRef.current) {
       if (foundWordsRef.current.has(word.clean)) continue;
       if (word.path.length !== sequence.length) continue;
-
       const matches = word.path.every(
         (p, i) => p.y === sequence[i].r && p.x === sequence[i].c
       );
       if (matches) return word;
     }
     return null;
+  }, []);
+
+  const fireWordFound = useCallback((matched: PlacedWord) => {
+    const adjacentKeys = new Set<string>();
+    for (const p of matched.path) {
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          const nr = p.y + dr;
+          const nc = p.x + dc;
+          if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+            adjacentKeys.add(`${nr},${nc}`);
+          }
+        }
+      }
+    }
+    const foundKeys = new Set(matched.path.map(p => `${p.y},${p.x}`));
+
+    setCellStates(prev =>
+      prev.map((row, ri) =>
+        row.map((state, ci) => {
+          const key = `${ri},${ci}`;
+          if (foundKeys.has(key)) return 'found';
+          if (adjacentKeys.has(key) && state !== 'found') return 'adjacent';
+          return state;
+        })
+      )
+    );
+
+    setFlareSet(foundKeys);
+    setTimeout(() => setFlareSet(new Set()), 500);
+    setFoundWords(prev => new Set([...prev, matched.clean]));
+    console.log('Found word:', matched.clean);
+  }, []);
+
+  const triggerFail = useCallback((cells: CellCoord[]) => {
+    if (cells.length === 0) return;
+    const keys = new Set(cells.map(p => `${p.r},${p.c}`));
+    setFailingCells(keys);
+    if (failTimerRef.current) clearTimeout(failTimerRef.current);
+    failTimerRef.current = setTimeout(() => setFailingCells(new Set()), 300);
   }, []);
 
   const isInStraightLine = useCallback((sequence: CellCoord[]): boolean => {
@@ -218,12 +281,12 @@ export default function SpyllingBee() {
       if (
         sequence[i].r - sequence[i - 1].r !== dr ||
         sequence[i].c - sequence[i - 1].c !== dc
-      ) {
-        return false;
-      }
+      ) return false;
     }
     return true;
   }, []);
+
+  // ── Tap mechanic ──
 
   const handleCellTap = useCallback((r: number, c: number) => {
     if (tapTimerRef.current) {
@@ -240,57 +303,19 @@ export default function SpyllingBee() {
       const last = prev[prev.length - 1];
       const dr = r - last.r;
       const dc = c - last.c;
-
       const isAdj = Math.abs(dr) <= 1 && Math.abs(dc) <= 1 && (dr !== 0 || dc !== 0);
 
       if (!isAdj) {
         newSeq = [{ r, c }];
       } else {
         const candidate = [...prev, { r, c }];
-        if (!isInStraightLine(candidate)) {
-          newSeq = [{ r, c }];
-        } else {
-          newSeq = candidate;
-        }
+        newSeq = isInStraightLine(candidate) ? candidate : [{ r, c }];
       }
     }
 
     const matched = checkWordMatch(newSeq);
     if (matched) {
-      // Compute adjacent cells (all 8 neighbors of each word letter)
-      const adjacentKeys = new Set<string>();
-      for (const p of matched.path) {
-        for (let dr = -1; dr <= 1; dr++) {
-          for (let dc = -1; dc <= 1; dc++) {
-            if (dr === 0 && dc === 0) continue;
-            const nr = p.y + dr;
-            const nc = p.x + dc;
-            if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
-              adjacentKeys.add(`${nr},${nc}`);
-            }
-          }
-        }
-      }
-      const foundKeys = new Set(matched.path.map(p => `${p.y},${p.x}`));
-
-      setCellStates(prevStates =>
-        prevStates.map((row, ri) =>
-          row.map((state, ci) => {
-            const key = `${ri},${ci}`;
-            if (foundKeys.has(key)) return 'found';
-            if (adjacentKeys.has(key) && state !== 'found') return 'adjacent';
-            return state;
-          })
-        )
-      );
-
-      const flareKeys = new Set(matched.path.map(p => `${p.y},${p.x}`));
-      setFlareSet(flareKeys);
-      setTimeout(() => setFlareSet(new Set()), 500);
-
-      setFoundWords(prev => new Set([...prev, matched.clean]));
-      console.log('Found word:', matched.clean);
-
+      fireWordFound(matched);
       tapSequenceRef.current = [];
       setTapSequence([]);
       return;
@@ -300,10 +325,122 @@ export default function SpyllingBee() {
     setTapSequence(newSeq);
 
     tapTimerRef.current = setTimeout(() => {
+      triggerFail(tapSequenceRef.current);
       tapSequenceRef.current = [];
-      flickerAndClear();
+      setTapSequence([]);
     }, TAP_TIMEOUT);
-  }, [checkWordMatch, isInStraightLine, flickerAndClear]);
+  }, [checkWordMatch, isInStraightLine, fireWordFound, triggerFail]);
+
+  // ── Drag/swipe mechanic ──
+
+  const getCellFromPoint = useCallback((x: number, y: number): CellCoord | null => {
+    const el = document.elementFromPoint(x, y);
+    if (!el) return null;
+    const cell = (el as HTMLElement).closest('[data-row]') as HTMLElement | null;
+    if (!cell) return null;
+    const r = parseInt(cell.dataset.row!, 10);
+    const c = parseInt(cell.dataset.col!, 10);
+    if (isNaN(r) || isNaN(c)) return null;
+    return { r, c };
+  }, []);
+
+  const handleGridPointerDown = useCallback((e: React.PointerEvent) => {
+    if (e.button !== 0) return;
+    const cell = getCellFromPoint(e.clientX, e.clientY);
+    if (!cell) return;
+
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    e.preventDefault();
+
+    pointerStartRef.current = { x: e.clientX, y: e.clientY, r: cell.r, c: cell.c };
+    isDraggingRef.current = false;
+    dragPathRef.current = [{ r: cell.r, c: cell.c }];
+    setDragPath([{ r: cell.r, c: cell.c }]);
+  }, [getCellFromPoint]);
+
+  const handleGridPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!pointerStartRef.current) return;
+    e.preventDefault();
+
+    const { x: startX, y: startY } = pointerStartRef.current;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+
+    if (!isDraggingRef.current && Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD) {
+      isDraggingRef.current = true;
+      // Clear tap sequence — swipe takes over
+      if (tapTimerRef.current) { clearTimeout(tapTimerRef.current); tapTimerRef.current = null; }
+      tapSequenceRef.current = [];
+      setTapSequence([]);
+    }
+
+    if (!isDraggingRef.current) return;
+
+    const cell = getCellFromPoint(e.clientX, e.clientY);
+    if (!cell) {
+      // Pointer left the grid — cancel drag silently
+      pointerStartRef.current = null;
+      isDraggingRef.current = false;
+      dragPathRef.current = [];
+      setDragPath([]);
+      return;
+    }
+
+    const path = dragPathRef.current;
+    const last = path[path.length - 1];
+    if (cell.r === last.r && cell.c === last.c) return; // Still same cell
+
+    const dr = Math.abs(cell.r - last.r);
+    const dc = Math.abs(cell.c - last.c);
+    if (dr > 1 || dc > 1) return; // Not adjacent
+
+    // Backtrack: moving back to previous cell undoes the last step
+    if (path.length >= 2) {
+      const prev = path[path.length - 2];
+      if (cell.r === prev.r && cell.c === prev.c) {
+        const newPath = path.slice(0, -1);
+        dragPathRef.current = newPath;
+        setDragPath(newPath);
+        return;
+      }
+    }
+
+    // Ignore if cell is already in the path (no loops)
+    if (path.some(p => p.r === cell.r && p.c === cell.c)) return;
+
+    const newPath = [...path, { r: cell.r, c: cell.c }];
+    dragPathRef.current = newPath;
+    setDragPath(newPath);
+  }, [getCellFromPoint]);
+
+  const handleGridPointerUp = useCallback((e: React.PointerEvent) => {
+    if (!pointerStartRef.current) return;
+
+    const startCell = pointerStartRef.current;
+    const wasDragging = isDraggingRef.current;
+
+    pointerStartRef.current = null;
+    isDraggingRef.current = false;
+
+    if (wasDragging) {
+      const path = dragPathRef.current;
+      const matched = checkWordMatch(path);
+      if (matched) {
+        fireWordFound(matched);
+      } else if (path.length > 1) {
+        triggerFail(path);
+      }
+      dragPathRef.current = [];
+      setDragPath([]);
+    } else {
+      // Was a tap — clear drag visual and handle as tap
+      dragPathRef.current = [];
+      setDragPath([]);
+      handleCellTap(startCell.r, startCell.c);
+    }
+
+    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* already released */ }
+  }, [checkWordMatch, fireWordFound, triggerFail, handleCellTap]);
 
   const toggleLetter = useCallback((letter: string) => {
     setSelectedLetters(prev => {
@@ -673,7 +810,11 @@ export default function SpyllingBee() {
   }
 
   const canSubmit = selectedLetters.length === MAX_SELECTED;
-  const tapSet = new Set(tapSequence.map(t => `${t.r},${t.c}`));
+  const activeSet = new Set([
+    ...tapSequence.map(t => `${t.r},${t.c}`),
+    ...dragPath.map(t => `${t.r},${t.c}`),
+  ]);
+  const activePath = dragPath.length > 0 ? dragPath : tapSequence;
 
   return (
     <div
@@ -892,17 +1033,25 @@ export default function SpyllingBee() {
           border: '2px solid #1A1A1A',
           borderRadius: 3,
           boxShadow: '5px 5px 0px #1A1A1A, inset 1px 1px 0px #E8E0D4',
-          width: 'min(calc(100vw - 24px), 500px)',
+          width: 'min(calc(100vw - 24px), 440px)',
           boxSizing: 'border-box',
           overflow: 'hidden',
+          position: 'relative',
         }}
       >
         <div
+          ref={gridRef}
           className="grid"
           style={{
             gridTemplateColumns: `repeat(${COLS}, 1fr)`,
             gap: 3,
+            touchAction: 'none',
+            cursor: 'crosshair',
+            position: 'relative',
           }}
+          onPointerDown={handleGridPointerDown}
+          onPointerMove={handleGridPointerMove}
+          onPointerUp={handleGridPointerUp}
         >
           {grid.map((row, ri) =>
             row.map((letter, ci) => {
@@ -911,20 +1060,16 @@ export default function SpyllingBee() {
               const isAdjacent = state === 'adjacent';
               const isRevealed = state === 'revealed';
               const isVisible = isRevealed || isFound || isAdjacent;
-              const isTapped = tapSet.has(`${ri},${ci}`);
-              const isFlaring = flareSet.has(`${ri},${ci}`);
               const cellKey = `${ri},${ci}`;
+              const isActive = activeSet.has(cellKey);
+              const isFailing = failingCells.has(cellKey);
+              const isFlaring = flareSet.has(cellKey);
               const redactDelay = redactingCells.get(cellKey);
               const isRedacting = redactDelay !== undefined;
-              const tapIndex = isTapped
-                ? tapSequence.findIndex(t => t.r === ri && t.c === ci)
+              const pathIndex = isActive
+                ? activePath.findIndex(t => t.r === ri && t.c === ci)
                 : -1;
 
-              // Visual hierarchy:
-              // 1. Orange-red = temporary reveal (look here NOW)
-              // 2. Black bold = found word (decoded, confirmed)
-              // 3. Dark gray = adjacent to found word (bonus intel)
-              // 4. Faint X = hidden (quiet background)
               let cellColor: string;
               let cellOpacity = 1;
               let fontWeight: number | string = 400;
@@ -932,6 +1077,10 @@ export default function SpyllingBee() {
               if (isFlaring) {
                 cellColor = '#E8530E';
                 fontWeight = 700;
+              } else if (isActive) {
+                cellColor = '#E8530E';
+                fontWeight = 700;
+                cellOpacity = 1;
               } else if (isFound) {
                 cellColor = '#1A1A1A';
                 fontWeight = 700;
@@ -943,7 +1092,6 @@ export default function SpyllingBee() {
                 cellColor = '#E8530E';
                 fontWeight = 700;
               } else {
-                // Hidden X — dim further during active reveal
                 cellColor = '#1A1A1A';
                 cellOpacity = revealActive ? 0.2 : 0.35;
               }
@@ -951,7 +1099,8 @@ export default function SpyllingBee() {
               return (
                 <div
                   key={`${ri}-${ci}`}
-                  onClick={() => handleCellTap(ri, ci)}
+                  data-row={ri}
+                  data-col={ci}
                   className="relative select-none"
                   style={{
                     fontFamily: "'VT323', monospace",
@@ -961,25 +1110,26 @@ export default function SpyllingBee() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: 'clamp(18px, 4.5vw, 26px)',
+                    fontSize: 'clamp(24px, 6vw, 32px)',
                     color: cellColor,
                     fontWeight,
-                    opacity: flickering && isTapped ? 0 : cellOpacity,
+                    opacity: cellOpacity,
                     transition: isFlaring
                       ? 'color 0.5s ease'
-                      : flickering && isTapped
-                        ? 'opacity 0.15s ease-out'
-                        : 'opacity 0.3s ease',
-                    cursor: 'pointer',
-                    background: isTapped && !flickering
-                      ? 'rgba(232, 83, 14, 0.1)'
-                      : 'transparent',
-                    animation: isFlaring
-                      ? 'flare-bass 0.5s ease-out forwards'
-                      : 'none',
+                      : 'opacity 0.3s ease, background 0.15s ease',
+                    background: isFailing
+                      ? 'rgba(232, 83, 14, 0.25)'
+                      : isActive
+                        ? 'rgba(232, 83, 14, 0.12)'
+                        : 'transparent',
+                    animation: isFailing
+                      ? 'fail-flash 0.3s ease-out'
+                      : isFlaring
+                        ? 'flare-bass 0.5s ease-out forwards'
+                        : 'none',
                   }}
                 >
-                  {isVisible ? letter : 'X'}
+                  {isVisible || isActive ? letter : 'X'}
                   {/* Redaction bar overlay */}
                   {isRedacting && (
                     <div
@@ -994,7 +1144,7 @@ export default function SpyllingBee() {
                       }}
                     />
                   )}
-                  {isTapped && !flickering && (
+                  {isActive && !isFailing && (
                     <span
                       className="absolute"
                       style={{
@@ -1007,12 +1157,36 @@ export default function SpyllingBee() {
                         lineHeight: 1,
                       }}
                     >
-                      {tapIndex + 1}
+                      {pathIndex + 1}
                     </span>
                   )}
                 </div>
               );
             })
+          )}
+          {/* SVG trail connecting selected cells */}
+          {trailPoints.length >= 2 && (
+            <svg
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                pointerEvents: 'none',
+                zIndex: 10,
+              }}
+            >
+              <polyline
+                points={trailPoints.map(p => `${p.x},${p.y}`).join(' ')}
+                fill="none"
+                stroke="#E8530E"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeOpacity="0.5"
+              />
+            </svg>
           )}
         </div>
       </div>

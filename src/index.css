@@ -126,6 +126,11 @@ body {
   100% { color: #1A1A1A; }
 }
 
+@keyframes fail-flash {
+  0% { background: rgba(232, 83, 14, 0.25); }
+  100% { background: transparent; }
+}
+
 .spylling-key:not([data-selected]):hover {
   box-shadow: 1px 1px 0px #1A1A1A !important;
   transform: translate(1px, 1px) !important;
