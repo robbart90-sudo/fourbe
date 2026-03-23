@@ -20,7 +20,7 @@ type WordSearchInstance = any;
 const DICTIONARY = ["BACON", "EGGS", "TOAST", "COFFEE", "WAFFLE", "CEREAL"];
 const THEME_NAME = 'Breakfast';
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-const HTP_SEEN_KEY = 'spylling-bee-played-before';
+const HTP_SEEN_KEY = 'spyxxing-bee-played-before';
 const ROWS = 10;
 const COLS = 10;
 const MAX_SELECTED = 3;
@@ -93,7 +93,7 @@ function GameBoardIcon({ size = 32 }: { size?: number }) {
   );
 }
 
-export default function SpyllingBee() {
+export default function SpyxxingBee() {
   const [grid, setGrid] = useState<string[][] | null>(null);
   const [words, setWords] = useState<PlacedWord[]>([]);
   const [foundWords, setFoundWords] = useState<Set<string>>(new Set());
@@ -170,7 +170,7 @@ export default function SpyllingBee() {
   useEffect(() => {
     const link = document.querySelector("link[rel='icon']") as HTMLLinkElement | null;
     const prev = link?.href;
-    if (link) link.href = '/spylling-bee-favicon.svg';
+    if (link) link.href = '/spyxxing-bee-favicon.svg';
     document.title = 'SpyXXing Bee';
     return () => {
       if (link && prev) link.href = prev;
@@ -677,7 +677,7 @@ export default function SpyllingBee() {
         {/* Play button */}
         <button
           onClick={startGame}
-          className="cursor-pointer spylling-play-btn"
+          className="cursor-pointer spyxxing-play-btn"
           style={{
             fontFamily: "'Archivo Black', sans-serif",
             fontSize: '1.1rem',
@@ -1026,7 +1026,7 @@ export default function SpyllingBee() {
 
       {/* Grid panel */}
       <div
-        className="spylling-grid-panel"
+        className="spyxxing-grid-panel"
         style={{
           background: '#F5F0E8',
           padding: 'clamp(6px, 2vw, 16px)',
@@ -1202,7 +1202,7 @@ export default function SpyllingBee() {
             <button
               key={letter}
               onClick={() => toggleLetter(letter)}
-              className="cursor-pointer spylling-key"
+              className="cursor-pointer spyxxing-key"
               data-selected={isSelected || undefined}
               style={{
                 fontFamily: "'Inter', sans-serif",

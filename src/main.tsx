@@ -7,7 +7,7 @@ import { ComingSoon } from './components/ComingSoon';
 
 const Editor = lazy(() => import('./pages/Editor'));
 const Keylocker = lazy(() => import('./pages/Keylocker'));
-const SpyllingBee = lazy(() => import('./pages/SpyllingBee'));
+const SpyxxingBee = lazy(() => import('./pages/SpyxxingBee'));
 
 const PLAYTEST_KEY = 'fourbe-playtest';
 const PLAYTEST_CODE = 'fourbe2026';
@@ -73,10 +73,10 @@ createRoot(document.getElementById('root')!).render(
           }
         />
         <Route
-          path="/spylling-bee"
+          path="/spyxxing-bee"
           element={
             <Suspense fallback={null}>
-              <SpyllingBee />
+              <SpyxxingBee />
             </Suspense>
           }
         />

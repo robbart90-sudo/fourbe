@@ -113,7 +113,7 @@ body {
   color: #e0e0e8;
 }
 
-/* ── Spylling Bee ───────────────────────────────────────────────────────────── */
+/* ── Spyxxing Bee ───────────────────────────────────────────────────────────── */
 
 @keyframes redact-sweep {
   0% { width: 0; }
@@ -131,17 +131,17 @@ body {
   100% { background: transparent; }
 }
 
-.spylling-key:not([data-selected]):hover {
+.spyxxing-key:not([data-selected]):hover {
   box-shadow: 1px 1px 0px #1A1A1A !important;
   transform: translate(1px, 1px) !important;
   opacity: 1 !important;
 }
 
-.spylling-play-btn:hover {
+.spyxxing-play-btn:hover {
   box-shadow: 2px 2px 0px #1A1A1A !important;
   transform: translate(2px, 2px) !important;
 }
-.spylling-play-btn:active {
+.spyxxing-play-btn:active {
   box-shadow: none !important;
   transform: translate(4px, 4px) !important;
 }
