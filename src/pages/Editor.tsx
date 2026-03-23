@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import type { Puzzle, Round } from '../types';
 import { getRevealedAtChunk } from '../lib/reveal';
-import { generateAcceptList } from '../lib/judge';
 import {
   savePuzzle,
   deletePuzzle,
@@ -15,18 +14,14 @@ import {
 
 const EDITOR_KEY = 'fourbe2026';
 
-const PROMPT_OPTIONS = ['Who am I?', 'What am I?', 'Where am I?'] as const;
-
 function emptyRound(n: number): Round {
-  return { clue: '', answer: '', connection: '', round: n };
+  return { clue: '', answer: '', connection: '', connectionCharIndices: [], round: n };
 }
 
 function emptyPuzzle(): Puzzle {
   return {
     subject: '',
-    subjectArticle: 'Who am I?',
     rounds: [emptyRound(1), emptyRound(2), emptyRound(3), emptyRound(4)],
-    acceptList: { perfect: [], kindOf: [] },
   };
 }
 
@@ -138,10 +133,6 @@ function EditorInner() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saveMsg, setSaveMsg] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [newPerfect, setNewPerfect] = useState('');
-  const [newKindOf, setNewKindOf] = useState('');
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError] = useState('');
   const importRef = useRef<HTMLInputElement>(null);
 
   const refreshList = useCallback(() => {
@@ -154,63 +145,58 @@ function EditorInner() {
 
   // --- Field updaters ---
   const setSubject = (v: string) => setPuzzle((p) => ({ ...p, subject: v }));
-  const setPrompt = (v: string) => setPuzzle((p) => ({ ...p, subjectArticle: v }));
+  const setCategory = (v: string) => setPuzzle((p) => ({ ...p, subjectCategory: v }));
 
   const setRoundField = (idx: number, field: keyof Round, value: string) => {
     setPuzzle((p) => {
       const rounds = [...p.rounds] as [Round, Round, Round, Round];
       rounds[idx] = { ...rounds[idx], [field]: field === 'answer' ? value.toUpperCase() : value };
+      // Reset connection char indices when answer changes
+      if (field === 'answer') {
+        rounds[idx] = { ...rounds[idx], connectionCharIndices: [] };
+      }
       return { ...p, rounds };
     });
   };
 
-  const addAcceptEntry = (tier: 'perfect' | 'kindOf', value: string) => {
-    const trimmed = value.trim();
-    if (!trimmed) return;
+  // Character-level connection selection with click-drag
+  const draggingRef = useRef<{ roundIdx: number; adding: boolean } | null>(null);
+
+  const toggleConnectionChar = (roundIdx: number, charIdx: number) => {
     setPuzzle((p) => {
-      const list = p.acceptList ?? { perfect: [], kindOf: [] };
-      if (list[tier].some((e) => e.toUpperCase() === trimmed.toUpperCase())) return p;
-      return { ...p, acceptList: { ...list, [tier]: [...list[tier], trimmed] } };
+      const rounds = [...p.rounds] as [Round, Round, Round, Round];
+      const indices = rounds[roundIdx].connectionCharIndices ?? [];
+      const next = indices.includes(charIdx)
+        ? indices.filter((i) => i !== charIdx)
+        : [...indices, charIdx].sort((a, b) => a - b);
+      rounds[roundIdx] = { ...rounds[roundIdx], connectionCharIndices: next };
+      return { ...p, rounds };
     });
   };
 
-  const removeAcceptEntry = (tier: 'perfect' | 'kindOf', idx: number) => {
-    setPuzzle((p) => {
-      const list = p.acceptList ?? { perfect: [], kindOf: [] };
-      return { ...p, acceptList: { ...list, [tier]: list[tier].filter((_, i) => i !== idx) } };
-    });
+  const handleCharMouseDown = (roundIdx: number, charIdx: number) => {
+    const indices = puzzle.rounds[roundIdx].connectionCharIndices ?? [];
+    const adding = !indices.includes(charIdx);
+    draggingRef.current = { roundIdx, adding };
+    toggleConnectionChar(roundIdx, charIdx);
   };
 
-  const handleGenerateAI = async () => {
-    setAiLoading(true);
-    setAiError('');
-    try {
-      const answers = puzzle.rounds.map((r) => r.answer).filter(Boolean);
-      const result = await generateAcceptList(puzzle.subject, answers);
-      // Merge with existing (don't overwrite manual additions)
-      setPuzzle((p) => {
-        const existing = p.acceptList ?? { perfect: [], kindOf: [] };
-        const existingPerfectUpper = new Set(existing.perfect.map((s) => s.toUpperCase()));
-        const existingKindOfUpper = new Set(existing.kindOf.map((s) => s.toUpperCase()));
-        const newPerfect = result.perfect.filter((s) => !existingPerfectUpper.has(s.toUpperCase()));
-        const newKindOf = result.kindOf.filter((s) => !existingKindOfUpper.has(s.toUpperCase()));
-        return {
-          ...p,
-          acceptList: {
-            perfect: [...existing.perfect, ...newPerfect],
-            kindOf: [...existing.kindOf, ...newKindOf],
-          },
-        };
-      });
-    } catch (err) {
-      console.error('Accept list generation failed:', err);
-      const msg = err instanceof Error ? err.message : 'Failed — try again';
-      setAiError(msg);
-      setTimeout(() => setAiError(''), 5000);
-    } finally {
-      setAiLoading(false);
+  const handleCharMouseEnter = (roundIdx: number, charIdx: number) => {
+    if (!draggingRef.current || draggingRef.current.roundIdx !== roundIdx) return;
+    const indices = puzzle.rounds[roundIdx].connectionCharIndices ?? [];
+    const isSelected = indices.includes(charIdx);
+    if (draggingRef.current.adding && !isSelected) {
+      toggleConnectionChar(roundIdx, charIdx);
+    } else if (!draggingRef.current.adding && isSelected) {
+      toggleConnectionChar(roundIdx, charIdx);
     }
   };
+
+  useEffect(() => {
+    const handleMouseUp = () => { draggingRef.current = null; };
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => window.removeEventListener('mouseup', handleMouseUp);
+  }, []);
 
   // --- Validation ---
   const validate = (): boolean => {
@@ -327,24 +313,27 @@ function EditorInner() {
 
         <div>
           <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">
-            Prompt
+            Category
           </label>
-          <div className="flex gap-2">
-            {PROMPT_OPTIONS.map((opt) => (
-              <button
-                key={opt}
-                type="button"
-                onClick={() => setPrompt(opt)}
-                className={`px-3 py-1.5 text-sm rounded-lg cursor-pointer transition-colors ${
-                  puzzle.subjectArticle === opt
-                    ? 'bg-gray-800 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {opt}
-              </button>
-            ))}
-          </div>
+          <input
+            type="text"
+            value={puzzle.subjectCategory ?? ''}
+            onChange={(e) => setCategory(e.target.value)}
+            placeholder="Person, Place, Thing, Character, Game..."
+            list="category-suggestions"
+            className="w-full px-3 py-2.5 text-base border border-gray-300 rounded-lg outline-none focus:border-gray-800 transition-colors"
+          />
+          <datalist id="category-suggestions">
+            <option value="Person" />
+            <option value="Place" />
+            <option value="Thing" />
+            <option value="Character" />
+            <option value="Game" />
+            <option value="Movie" />
+            <option value="TV Show" />
+            <option value="Quote" />
+            <option value="Event" />
+          </datalist>
         </div>
 
         <div>
@@ -397,6 +386,62 @@ function EditorInner() {
                 className="w-full px-3 py-2.5 text-base font-mono border border-gray-300 rounded-lg outline-none focus:border-gray-800 transition-colors uppercase"
               />
               <RevealPreview answer={r.answer} />
+              {r.answer.trim() && (() => {
+                const upper = r.answer.toUpperCase();
+                const selectedSet = new Set(r.connectionCharIndices ?? []);
+                const isLetterCh = (c: string) => c >= 'A' && c <= 'Z';
+                let globalIdx = 0;
+                return (
+                  <div className="mt-2">
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                      Connection Letters
+                      {selectedSet.size === 0 && (
+                        <span className="text-amber-500 ml-2">Tag at least one letter</span>
+                      )}
+                    </label>
+                    <div className="flex flex-wrap gap-[3px] select-none" style={{ rowGap: '4px' }}>
+                      {upper.split(' ').map((word, wi) => {
+                        const startIdx = globalIdx;
+                        const tiles = [...word].map((ch, li) => {
+                          const idx = startIdx + li;
+                          if (!isLetterCh(ch)) {
+                            return (
+                              <div
+                                key={idx}
+                                className="w-6 h-7 flex items-center justify-center text-xs font-bold font-mono text-gray-400"
+                              >
+                                {ch}
+                              </div>
+                            );
+                          }
+                          const selected = selectedSet.has(idx);
+                          return (
+                            <div
+                              key={idx}
+                              onMouseDown={() => handleCharMouseDown(i, idx)}
+                              onMouseEnter={() => handleCharMouseEnter(i, idx)}
+                              className={`w-7 h-7 flex items-center justify-center text-xs font-bold font-mono border-2 rounded-sm cursor-pointer transition-colors ${
+                                selected
+                                  ? 'bg-amber-500 border-amber-500 text-white'
+                                  : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                              }`}
+                            >
+                              {ch}
+                            </div>
+                          );
+                        });
+                        globalIdx += word.length + 1;
+                        return (
+                          <div key={wi} className="flex gap-[3px]" style={{ flexWrap: 'nowrap' }}>
+                            {tiles}
+                            {wi < upper.split(' ').length - 1 && <div className="w-1.5" />}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
               {r.answer.replace(/\s/g, '').length > 0 && r.answer.replace(/\s/g, '').length < 5 && (
                 <p className="text-amber-600 text-xs mt-1">Answer should be at least 5 letters for the reveal system to work properly.</p>
               )}
@@ -417,129 +462,6 @@ function EditorInner() {
           </div>
         </section>
       ))}
-
-      {/* ACCEPT LIST */}
-      <section className="mb-8 border border-gray-200 rounded-lg p-5">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
-          Fourbe Answer — Accept List
-        </h2>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {/* Perfect answers */}
-          <div>
-            <label className="block text-xs font-medium text-player uppercase tracking-wider mb-2">
-              Perfect! Answers
-            </label>
-            {/* Auto-included subject */}
-            {puzzle.subject.trim() && (
-              <div className="flex items-center gap-2 mb-1 px-2 py-1.5 bg-gray-50 rounded text-sm text-gray-400 italic">
-                {puzzle.subject}
-                <span className="text-xs text-gray-300 ml-auto">auto</span>
-              </div>
-            )}
-            {/* Manual entries */}
-            <div className="space-y-1 mb-2">
-              {(puzzle.acceptList?.perfect || []).map((entry, i) => (
-                <div key={i} className="flex items-center gap-2 px-2 py-1.5 bg-green-50 rounded text-sm text-gray-800">
-                  <span className="flex-1">{entry}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeAcceptEntry('perfect', i)}
-                    className="text-gray-400 hover:text-red-500 cursor-pointer text-xs font-bold"
-                  >
-                    &times;
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className="flex gap-1.5">
-              <input
-                type="text"
-                value={newPerfect}
-                onChange={(e) => setNewPerfect(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    addAcceptEntry('perfect', newPerfect);
-                    setNewPerfect('');
-                  }
-                }}
-                placeholder="Add entry..."
-                className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded outline-none focus:border-gray-800 transition-colors"
-              />
-              <button
-                type="button"
-                onClick={() => { addAcceptEntry('perfect', newPerfect); setNewPerfect(''); }}
-                className="px-2.5 py-1.5 text-xs font-medium bg-gray-100 rounded cursor-pointer hover:bg-gray-200 transition-colors"
-              >
-                Add
-              </button>
-            </div>
-          </div>
-
-          {/* Kind Of answers */}
-          <div>
-            <label className="block text-xs font-medium text-kindof uppercase tracking-wider mb-2">
-              Kind Of! Answers
-            </label>
-            <div className="space-y-1 mb-2">
-              {(puzzle.acceptList?.kindOf || []).map((entry, i) => (
-                <div key={i} className="flex items-center gap-2 px-2 py-1.5 bg-amber-50 rounded text-sm text-gray-800">
-                  <span className="flex-1">{entry}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeAcceptEntry('kindOf', i)}
-                    className="text-gray-400 hover:text-red-500 cursor-pointer text-xs font-bold"
-                  >
-                    &times;
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className="flex gap-1.5">
-              <input
-                type="text"
-                value={newKindOf}
-                onChange={(e) => setNewKindOf(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    addAcceptEntry('kindOf', newKindOf);
-                    setNewKindOf('');
-                  }
-                }}
-                placeholder="Add entry..."
-                className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded outline-none focus:border-gray-800 transition-colors"
-              />
-              <button
-                type="button"
-                onClick={() => { addAcceptEntry('kindOf', newKindOf); setNewKindOf(''); }}
-                className="px-2.5 py-1.5 text-xs font-medium bg-gray-100 rounded cursor-pointer hover:bg-gray-200 transition-colors"
-              >
-                Add
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Generate with AI button */}
-        <div className="mt-4 pt-4 border-t border-gray-100">
-          <button
-            type="button"
-            onClick={handleGenerateAI}
-            disabled={!puzzle.subject.trim() || puzzle.rounds.filter((r) => r.answer.trim()).length < 2 || aiLoading}
-            className="px-4 py-2 text-sm font-medium border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {aiLoading && (
-              <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-            )}
-            {aiError || (aiLoading ? 'Generating...' : 'Generate with AI')}
-          </button>
-        </div>
-      </section>
 
       {/* SAVE */}
       <div className="flex items-center gap-3 mb-12">

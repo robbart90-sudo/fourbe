@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import type { Puzzle, RoundResult } from '../types';
+import type { Puzzle, Round, RoundResult } from '../types';
 import GameRound from './GameRound';
+import type { GameRoundHandle } from './GameRound';
 import { FourbeLogo } from './FourbeLogo';
 import HowToPlayModal from './HowToPlayModal';
-import { judgeGuess } from '../lib/judge';
-import { playPerfectJingle, playKindOfSound, playFailSound } from '../lib/sounds';
+import { playPerfectJingle, playFailSound } from '../lib/sounds';
 import { trackGameResult } from '../lib/analytics';
 
 const HTP_SEEN_KEY = 'fourbe-played-before';
@@ -13,9 +13,9 @@ const TILE_MIN_SM = 18;
 const TILE_GAP_SM = 3;
 const ROOT_MAX_WIDTH = 600;
 const ROOT_PADDING = 32;
+const MAX_LIVES = 4;
 
-type SessionPhase = 'start' | 'playing' | 'final-guess' | 'reveal';
-type FinalJudgment = 'Perfect!' | 'Kind Of!' | 'Not Quite...' | 'Time!';
+type SessionPhase = 'start' | 'playing' | 'final-round' | 'reveal';
 
 function isLetter(ch: string): boolean {
   return ch >= 'A' && ch <= 'Z';
@@ -37,9 +37,14 @@ function useAvailableWidth() {
 }
 
 // --- Shared tile row for displaying answers ---
-function AnswerTileRow({ answer, variant, availableWidth }: { answer: string; variant: 'solved' | 'failed'; availableWidth: number }) {
+function AnswerTileRow({ answer, variant, availableWidth, highlightCharIndices }: {
+  answer: string;
+  variant: 'solved' | 'failed';
+  availableWidth: number;
+  highlightCharIndices?: number[];
+}) {
   const upper = answer.toUpperCase();
-  const tileClass = variant === 'solved'
+  const defaultTileClass = variant === 'solved'
     ? 'border-player bg-player text-white'
     : 'border-gray-300 bg-gray-100 text-gray-400';
 
@@ -54,31 +59,47 @@ function AnswerTileRow({ answer, variant, availableWidth }: { answer: string; va
   const punctWidth = Math.max(8, Math.round(tileSize * 0.4));
   const wordGap = tileSize >= 28 ? 14 : 10;
 
+  const highlightSet = useMemo(
+    () => highlightCharIndices ? new Set(highlightCharIndices) : null,
+    [highlightCharIndices]
+  );
+
+  let globalIdx = 0;
+
   return (
     <div className="flex flex-wrap justify-center" style={{ gap: `3px ${wordGap}px` }}>
-      {upper.split(' ').map((word, wi) => (
-        <div key={wi} className="flex" style={{ flexWrap: 'nowrap', gap: TILE_GAP_SM }}>
-          {[...word].map((ch, ci) =>
-            isLetter(ch) ? (
-              <div
-                key={ci}
-                className={`flex items-center justify-center font-bold font-sans border-2 select-none ${tileClass}`}
-                style={{ width: tileSize, height: tileSize, fontSize }}
-              >
-                {ch}
-              </div>
-            ) : (
-              <div
-                key={ci}
-                className="flex items-center justify-center font-bold font-sans text-gray-500 select-none"
-                style={{ width: punctWidth, height: tileSize, fontSize }}
-              >
-                {ch}
-              </div>
-            )
-          )}
-        </div>
-      ))}
+      {upper.split(' ').map((word, wi) => {
+        const startIdx = globalIdx;
+        const wordEl = (
+          <div key={wi} className="flex" style={{ flexWrap: 'nowrap', gap: TILE_GAP_SM }}>
+            {[...word].map((ch, ci) => {
+              const idx = startIdx + ci;
+              const tileClass = highlightSet?.has(idx)
+                ? 'border-amber-500 bg-amber-500 text-white'
+                : defaultTileClass;
+              return isLetter(ch) ? (
+                <div
+                  key={ci}
+                  className={`flex items-center justify-center font-bold font-sans border-2 select-none ${tileClass}`}
+                  style={{ width: tileSize, height: tileSize, fontSize }}
+                >
+                  {ch}
+                </div>
+              ) : (
+                <div
+                  key={ci}
+                  className="flex items-center justify-center font-bold font-sans text-gray-500 select-none"
+                  style={{ width: punctWidth, height: tileSize, fontSize }}
+                >
+                  {ch}
+                </div>
+              );
+            })}
+          </div>
+        );
+        globalIdx += word.length + 1; // +1 for space
+        return wordEl;
+      })}
     </div>
   );
 }
@@ -86,11 +107,7 @@ function AnswerTileRow({ answer, variant, availableWidth }: { answer: string; va
 const FEEDBACK_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSfMfOdWWxLrYf5WOqJWpNvW7porrQteNyYFRV1BowaoYL6heQ/viewform?usp=dialog';
 const FEEDBACK_KEY = 'fourbe-feedback-given';
 
-const FINAL_GUESS_DURATION = 30;
-const FINAL_GUESS_SEGMENTS = 5;
-const FINAL_SEG_DURATION = FINAL_GUESS_DURATION / FINAL_GUESS_SEGMENTS;
 const MAX_ROUND_SCORE = 1000;
-const MAX_FOURBE_SCORE = 2000;
 
 function formatDate(): string {
   const d = new Date();
@@ -104,6 +121,15 @@ function ShareIcon() {
       <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
       <polyline points="16 6 12 2 8 6" />
       <line x1="12" y1="2" x2="12" y2="15" />
+    </svg>
+  );
+}
+
+// --- Lock icon SVG ---
+function LockIcon() {
+  return (
+    <svg width="10" height="12" viewBox="0 0 24 28" fill="currentColor" className="inline-block shrink-0">
+      <path d="M20 12V10c0-4.4-3.6-8-8-8S4 5.6 4 10v2H2v14h20V12h-2zm-12-2c0-2.2 1.8-4 4-4s4 1.8 4 4v2H8v-2z"/>
     </svg>
   );
 }
@@ -230,11 +256,14 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
   const [currentRoundIdx, setCurrentRoundIdx] = useState(0);
   const [results, setResults] = useState<RoundResult[]>([]);
 
-  // Final guess state
-  const [finalGuess, setFinalGuess] = useState('');
-  const [finalTime, setFinalTime] = useState(FINAL_GUESS_DURATION);
-  const [finalJudgment, setFinalJudgment] = useState<FinalJudgment | null>(null);
-  const [finalScore, setFinalScore] = useState(0);
+  // Final round state
+  const [finalResult, setFinalResult] = useState<RoundResult | null>(null);
+  const finalScore = finalResult?.score ?? 0;
+
+  // Hint state
+  const [hintsUsed, setHintsUsed] = useState(0);
+  const [finalLives, setFinalLives] = useState(MAX_LIVES);
+  const gameRoundRef = useRef<GameRoundHandle>(null);
 
   // Share button state
   const [shareText, setShareText] = useState('Share');
@@ -252,21 +281,15 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
   // Leave-game confirmation modal
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
-  // Reveal animation step (0 = nothing visible, 1-7 = staggered elements)
+  // Reveal animation step (0 = nothing visible, 1-6 = staggered elements)
   const [revealStep, setRevealStep] = useState(0);
-
-  const finalTimerRef = useRef<number | null>(null);
-  const finalLastTickRef = useRef<number>(0);
-  const finalTimeRef = useRef(FINAL_GUESS_DURATION);
-  const finalInputRef = useRef<HTMLInputElement>(null);
-  const finalSubmittedRef = useRef(false);
 
   const round = puzzle.rounds[currentRoundIdx];
   const runningScore = results.reduce((sum, r) => sum + r.score, 0);
   const totalScore = runningScore + finalScore;
 
-  // Must be called unconditionally (above all early returns) to satisfy React hook rules
-  const animatedTotal = useCountUp(totalScore, 800, revealStep >= 5);
+  // Must be called unconditionally to satisfy React hook rules
+  const animatedTotal = useCountUp(totalScore, 800, revealStep >= 3);
 
   const handleRoundComplete = useCallback((result: RoundResult) => {
     setResults((prev) => [...prev, result]);
@@ -275,36 +298,13 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
       setCurrentRoundIdx((prev) => prev + 1);
       setPhase('playing');
     } else {
-      setPhase('final-guess');
+      setPhase('final-round');
     }
   }, [currentRoundIdx]);
 
-  // --- Final guess submission (instant judging → reveal) ---
-  const handleFinalGuessSubmit = useCallback((guess: string) => {
-    if (finalSubmittedRef.current) return;
-    finalSubmittedRef.current = true;
-
-    // Stop the timer immediately, no matter what
-    if (finalTimerRef.current) {
-      cancelAnimationFrame(finalTimerRef.current);
-      finalTimerRef.current = null;
-    }
-
-    const trimmed = guess.trim();
-    let judgment: FinalJudgment;
-    let fScore: number;
-
-    if (!trimmed) {
-      judgment = 'Time!';
-      fScore = 0;
-    } else {
-      const result = judgeGuess(trimmed, puzzle);
-      judgment = result.judgment;
-      fScore = result.score;
-    }
-
-    setFinalJudgment(judgment);
-    setFinalScore(fScore);
+  // --- Final round completion → reveal ---
+  const handleFinalRoundComplete = useCallback((result: RoundResult) => {
+    setFinalResult(result);
     setPhase('reveal');
 
     // Fire-and-forget analytics
@@ -319,52 +319,32 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
       r3Lives: results[2]?.lives ?? 0,
       r4Score: results[3]?.score ?? 0,
       r4Lives: results[3]?.lives ?? 0,
-      finalGuess: trimmed,
-      judgment,
-      finalScore: fScore,
-      totalScore: roundScore + fScore,
+      finalGuess: puzzle.subject,
+      judgment: result.solved ? 'Solved' : 'Failed',
+      finalScore: result.score,
+      totalScore: roundScore + result.score,
     });
   }, [puzzle, results]);
 
-  // --- Final guess timer ---
-  const finalTick = useCallback(() => {
-    const now = performance.now();
-    const delta = (now - finalLastTickRef.current) / 1000;
-    finalLastTickRef.current = now;
+  // --- Hint handlers ---
+  const handleHint1 = useCallback(() => {
+    if (hintsUsed >= 1 || !gameRoundRef.current) return;
+    if (!gameRoundRef.current.deductLife()) return;
+    setHintsUsed(1);
+  }, [hintsUsed]);
 
-    const newTime = Math.max(0, finalTimeRef.current - delta);
-    finalTimeRef.current = newTime;
-    setFinalTime(newTime);
+  const handleHint2 = useCallback(() => {
+    if (hintsUsed < 1 || hintsUsed >= 2 || !gameRoundRef.current) return;
+    if (!gameRoundRef.current.deductLife()) return;
+    setHintsUsed(2);
+  }, [hintsUsed]);
 
-    if (newTime <= 0) {
-      handleFinalGuessSubmit(finalInputRef.current?.value ?? '');
-      return;
-    }
-
-    finalTimerRef.current = requestAnimationFrame(finalTick);
-  }, [handleFinalGuessSubmit]);
-
-  useEffect(() => {
-    if (phase !== 'final-guess') return;
-
-    finalSubmittedRef.current = false;
-    finalTimeRef.current = FINAL_GUESS_DURATION;
-    setFinalTime(FINAL_GUESS_DURATION);
-    setFinalGuess('');
-
-    finalLastTickRef.current = performance.now();
-    finalTimerRef.current = requestAnimationFrame(finalTick);
-
-    return () => {
-      if (finalTimerRef.current) cancelAnimationFrame(finalTimerRef.current);
-    };
-  }, [phase, finalTick]);
-
-  useEffect(() => {
-    if (phase === 'final-guess' && finalInputRef.current) {
-      finalInputRef.current.focus();
-    }
-  }, [phase]);
+  const handleHint3 = useCallback(() => {
+    if (hintsUsed < 2 || hintsUsed >= 3 || !gameRoundRef.current) return;
+    if (!gameRoundRef.current.deductLife()) return;
+    gameRoundRef.current.addGuessedLetters(['A', 'E', 'I', 'O', 'U']);
+    setHintsUsed(3);
+  }, [hintsUsed]);
 
   // --- Reveal stagger ---
   useEffect(() => {
@@ -374,17 +354,14 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
     }
     const timers: number[] = [];
     timers.push(window.setTimeout(() => setRevealStep(1), 0));
-    timers.push(window.setTimeout(() => setRevealStep(2), 200));
-    timers.push(window.setTimeout(() => setRevealStep(3), 500));
-    timers.push(window.setTimeout(() => setRevealStep(4), 900));
-    timers.push(window.setTimeout(() => setRevealStep(5), 1500));
-    timers.push(window.setTimeout(() => setRevealStep(6), 1700));
-    timers.push(window.setTimeout(() => setRevealStep(7), 2000));
+    timers.push(window.setTimeout(() => setRevealStep(2), 300));
+    timers.push(window.setTimeout(() => setRevealStep(3), 1000));
+    timers.push(window.setTimeout(() => setRevealStep(4), 1300));
+    timers.push(window.setTimeout(() => setRevealStep(5), 1600));
 
-    // Play judgment sound when results appear
-    if (finalJudgment === 'Perfect!') playPerfectJingle();
-    else if (finalJudgment === 'Kind Of!') playKindOfSound();
-    else if (finalJudgment === 'Not Quite...') playFailSound();
+    // Play sound based on final round result
+    if (finalResult?.solved) playPerfectJingle();
+    else playFailSound();
 
     return () => timers.forEach(clearTimeout);
   }, [phase]);
@@ -392,7 +369,7 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
   // --- "Fourbe" nav click → return to start (with confirmation if mid-game) ---
   useEffect(() => {
     const handleGoHome = () => {
-      if (phase === 'playing' || phase === 'final-guess') {
+      if (phase === 'playing' || phase === 'final-round') {
         setShowLeaveConfirm(true);
       } else {
         handlePlayAgain();
@@ -402,26 +379,6 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
     return () => window.removeEventListener('fourbe-go-home', handleGoHome);
   }, [phase]);
 
-  const handleFinalSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleFinalGuessSubmit(finalGuess);
-  };
-
-  // --- Timer segments for final guess ---
-  const finalSegBoundaries: number[] = [];
-  for (let i = 0; i <= FINAL_GUESS_SEGMENTS; i++) {
-    finalSegBoundaries.push(FINAL_GUESS_DURATION - i * FINAL_SEG_DURATION);
-  }
-  const finalSegments = [...Array(FINAL_GUESS_SEGMENTS)].map((_, idx) => {
-    const seg = FINAL_GUESS_SEGMENTS - 1 - idx;
-    const segStart = finalSegBoundaries[seg];
-    const segEnd = finalSegBoundaries[seg + 1];
-    const segDur = segStart - segEnd;
-    const elapsed = Math.max(0, segStart - finalTime);
-    const fill = Math.max(0, 1 - elapsed / segDur);
-    return { seg, fill };
-  });
-
   // --- Share handler ---
   const handleShare = async () => {
     // Lives dots per round
@@ -429,19 +386,22 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
       const filled = r.lives ?? 0;
       return '\u25CF'.repeat(filled) + '\u25CB'.repeat(4 - filled);
     });
-    // Final guess emoji
-    let fourbeEmoji = '\u2B1C';
-    if (finalJudgment === 'Perfect!') fourbeEmoji = '\u{1F7E9}';
-    else if (finalJudgment === 'Kind Of!') fourbeEmoji = '\u{1F7E8}';
+    // Final round lives dots
+    const finalDots = finalResult
+      ? '\u25CF'.repeat(finalResult.lives ?? 0) + '\u25CB'.repeat(4 - (finalResult.lives ?? 0))
+      : '\u25CB\u25CB\u25CB\u25CB';
 
-    const text = `Fourbe \u2014 ${formatDate()}\n${roundDots.join(' ')} ${fourbeEmoji}\n${totalScore.toLocaleString()} pts`;
+    // Hint usage line
+    const hintNames = [hintsUsed >= 1 && 'Category', hintsUsed >= 2 && 'Connections', hintsUsed >= 3 && 'Vowels'].filter(Boolean);
+    const hintLine = hintNames.length > 0 ? `\nHints: ${hintNames.join(', ')}` : '';
+
+    const text = `Fourbe \u2014 ${formatDate()}\n${roundDots.join(' ')} ${finalDots}${hintLine}\n${totalScore.toLocaleString()} pts`;
 
     try {
       await navigator.clipboard.writeText(text);
       setShareText('Copied!');
       setTimeout(() => setShareText('Share'), 2000);
     } catch {
-      // Fallback — select and copy
       setShareText('Copied!');
       setTimeout(() => setShareText('Share'), 2000);
     }
@@ -452,10 +412,9 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
     setPhase('start');
     setCurrentRoundIdx(0);
     setResults([]);
-    setFinalGuess('');
-    setFinalTime(FINAL_GUESS_DURATION);
-    setFinalJudgment(null);
-    setFinalScore(0);
+    setFinalResult(null);
+    setHintsUsed(0);
+    setFinalLives(MAX_LIVES);
     setShareText('Share');
   };
 
@@ -497,7 +456,7 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
   }
 
   // ===========================================
-  // PLAYING
+  // PLAYING (rounds 1-4)
   // ===========================================
   if (phase === 'playing') {
     return (
@@ -519,76 +478,133 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
   }
 
   // ===========================================
-  // FINAL GUESS SCREEN
+  // FINAL ROUND — hangman for the subject
   // ===========================================
-  if (phase === 'final-guess') {
-    return (
-      <><div className="flex flex-col items-center pt-10 pb-16 min-h-[calc(100vh-52px)]">
-        <h2 className="text-2xl text-gray-800 text-center mb-10" style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26 }}>
-          {puzzle.subjectArticle?.startsWith('Where') ? "Where's" : puzzle.subjectArticle?.startsWith('Who') ? "Who's" : "What's"} Today's Fourbe?
-        </h2>
+  if (phase === 'final-round') {
+    const finalRound: Round = {
+      clue: '',
+      answer: puzzle.subject.toUpperCase(),
+      connection: '',
+      connectionCharIndices: [],
+      round: 5,
+    };
 
-        <div className="w-full max-w-md mb-6">
-          {puzzle.rounds.map((r, i) => {
-            const result = results[i];
-            const solved = result?.solved ?? false;
-            return (
-              <div key={i}>
-                {i > 0 && <div className="h-px bg-gray-100 my-4" />}
-                <div className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-2">
-                  Round {r.round}
-                </div>
-                {solved ? (
-                  <AnswerTileRow answer={r.answer} variant="solved" availableWidth={availableWidth} />
-                ) : (
-                  <p className="text-lg font-bold font-sans text-gray-300 tracking-wide">???</p>
-                )}
-              </div>
-            );
-          })}
-        </div>
+    // Hint button styling helper
+    const hintBtnClass = (hintNum: number) => {
+      const isUsed = hintsUsed >= hintNum;
+      const isLocked = hintsUsed < hintNum - 1;
+      const isActive = hintsUsed === hintNum - 1;
+      const noLives = finalLives <= 0;
 
-        <form onSubmit={handleFinalSubmit} className="w-full mb-4" style={{ maxWidth: 320 }}>
-          <input
-            ref={finalInputRef}
-            type="text"
-            value={finalGuess}
-            onChange={(e) => setFinalGuess(e.target.value)}
-            className="w-full py-3 px-4 font-sans font-bold text-center rounded-lg outline-none"
-            style={{ fontSize: 18, border: '1.5px solid #b0b0b0', transition: 'border-color 0.15s' }}
-            onFocus={(e) => { e.target.style.borderColor = '#1a1a1a'; }}
-            onBlur={(e) => { e.target.style.borderColor = '#b0b0b0'; }}
-          />
+      if (isUsed) return 'bg-gray-100 text-gray-400 border-gray-200 cursor-default';
+      if (isLocked) return 'bg-gray-50 text-gray-300 border-gray-200 cursor-default';
+      if (noLives) return 'bg-gray-50 text-gray-300 border-gray-200 cursor-not-allowed';
+      if (isActive) return 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 cursor-pointer';
+      return 'bg-gray-50 text-gray-300 border-gray-200 cursor-default';
+    };
+
+    const isHintDisabled = (hintNum: number) => {
+      if (hintsUsed >= hintNum) return true;
+      if (hintsUsed < hintNum - 1) return true;
+      if (finalLives <= 0) return true;
+      return false;
+    };
+
+    const finalHeaderContent = (
+      <div className="w-full max-w-md mb-4">
+        {/* 4 revealed answers */}
+        {puzzle.rounds.map((r, i) => {
+          const result = results[i];
+          const solved = result?.solved ?? false;
+          const indices = (hintsUsed >= 2 && (r.connectionCharIndices ?? []).length > 0)
+            ? r.connectionCharIndices
+            : undefined;
+          return (
+            <div key={i}>
+              {i > 0 && <div className="h-px bg-gray-100 my-3" />}
+              <AnswerTileRow
+                answer={r.answer}
+                variant={solved ? 'solved' : 'failed'}
+                availableWidth={availableWidth}
+                highlightCharIndices={indices}
+              />
+              <p className="text-xs text-gray-400 italic mt-1.5 text-center">{r.clue}</p>
+              {hintsUsed >= 2 && r.connection && (
+                <p className="text-[10px] text-amber-600 mt-0.5 text-center">{r.connection}</p>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Hint buttons */}
+        <div className="flex gap-2 mt-5 mb-2">
           <button
-            type="submit"
-            disabled={!finalGuess.trim()}
-            className="w-full py-2.5 font-semibold bg-black text-white rounded-lg cursor-pointer hover:bg-gray-900 transition-colors mt-3"
-            style={{
-              fontSize: 15,
-              opacity: finalGuess.trim() ? 1 : 0,
-              pointerEvents: finalGuess.trim() ? 'auto' : 'none',
-              transition: 'opacity 0.2s ease-out',
-            }}
+            type="button"
+            onClick={handleHint1}
+            disabled={isHintDisabled(1)}
+            className={`flex-1 px-2 py-2 text-[11px] font-medium rounded-lg border transition-colors text-center ${hintBtnClass(1)}`}
           >
-            Submit
+            {hintsUsed >= 1 ? (
+              <span>Category<br /><span className="text-[10px] font-normal">{puzzle.subjectCategory || '???'}</span></span>
+            ) : (
+              <span>Category<br /><span className="text-[10px] font-normal text-gray-400">-1 life</span></span>
+            )}
           </button>
-        </form>
-
-        <div className="w-full" style={{ maxWidth: 320 }}>
-          <div className="flex gap-1">
-            {finalSegments.map(({ seg, fill }) => (
-              <div key={seg} className="flex-1 h-2 rounded-full bg-gray-200 overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-none ${
-                    finalTime <= 6 ? 'bg-red-500' : finalTime <= 12 ? 'bg-amber-500' : 'bg-gray-800'
-                  }`}
-                  style={{ width: `${fill * 100}%` }}
-                />
-              </div>
-            ))}
-          </div>
+          <button
+            type="button"
+            onClick={handleHint2}
+            disabled={isHintDisabled(2)}
+            className={`flex-1 px-2 py-2 text-[11px] font-medium rounded-lg border transition-colors text-center ${hintBtnClass(2)}`}
+          >
+            {hintsUsed >= 2 ? (
+              <span>Connections<br /><span className="text-[10px] font-normal">Revealed</span></span>
+            ) : (
+              <span className="flex items-center justify-center gap-1">
+                {hintsUsed < 1 && <LockIcon />}
+                Connections
+              </span>
+            )}
+            {hintsUsed < 2 && <span className="block text-[10px] font-normal text-gray-400">-1 life</span>}
+          </button>
+          <button
+            type="button"
+            onClick={handleHint3}
+            disabled={isHintDisabled(3)}
+            className={`flex-1 px-2 py-2 text-[11px] font-medium rounded-lg border transition-colors text-center ${hintBtnClass(3)}`}
+          >
+            {hintsUsed >= 3 ? (
+              <span>Vowels<br /><span className="text-[10px] font-normal">Placed</span></span>
+            ) : (
+              <span className="flex items-center justify-center gap-1">
+                {hintsUsed < 2 && <LockIcon />}
+                Vowels
+              </span>
+            )}
+            {hintsUsed < 3 && <span className="block text-[10px] font-normal text-gray-400">-1 life</span>}
+          </button>
         </div>
+
+        {/* Category display when hint 1 is used */}
+        {hintsUsed >= 1 && (
+          <p className="text-sm font-medium text-gray-500 text-center mt-2 mb-1">
+            Category: <span className="text-gray-800">{puzzle.subjectCategory || '???'}</span>
+          </p>
+        )}
       </div>
+    );
+
+    return (
+      <>
+        <GameRound
+          ref={gameRoundRef}
+          round={finalRound}
+          runningScore={runningScore}
+          onRoundComplete={handleFinalRoundComplete}
+          onLivesChange={setFinalLives}
+          label="Final Round"
+          hideClue
+          headerContent={finalHeaderContent}
+        />
         {showLeaveConfirm && (
           <LeaveConfirmModal
             onConfirm={() => { setShowLeaveConfirm(false); handlePlayAgain(); }}
@@ -600,18 +616,11 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
   }
 
   // ===========================================
-  // REVEAL SCREEN — the climax
+  // REVEAL SCREEN
   // ===========================================
 
-  const judgmentColor =
-    finalJudgment === 'Perfect!' ? 'text-player' :
-    finalJudgment === 'Kind Of!' ? 'text-kindof' :
-    'text-gray-500';
-
-  const fourbeBarColor =
-    finalJudgment === 'Perfect!' ? 'bg-player' :
-    finalJudgment === 'Kind Of!' ? 'bg-kindof' :
-    'bg-gray-300';
+  const finalSolved = finalResult?.solved ?? false;
+  const fourbeBarColor = finalSolved ? 'bg-player' : 'bg-gray-300';
 
   const fadeUp = (step: number) => ({
     opacity: revealStep >= step ? 1 : 0,
@@ -622,25 +631,16 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
   return (
     <div className="flex flex-col items-center pt-12 pb-16 min-h-[calc(100vh-52px)]">
 
-      {/* 1. JUDGMENT WORD — biggest, boldest */}
-      <p
-        className={`text-5xl ${judgmentColor}`}
+      {/* 1. THE SUBJECT */}
+      <h2
+        className="text-3xl text-gray-800"
         style={{
           fontFamily: 'var(--font-display)',
-          fontWeight: 900,
+          fontWeight: 800,
           opacity: revealStep >= 1 ? 1 : 0,
           transform: revealStep >= 1 ? 'scale(1)' : 'scale(0.85)',
           transition: 'opacity 0.4s ease-out, transform 0.4s ease-out',
         }}
-      >
-        {finalJudgment}
-      </p>
-      <div className="mb-8" />
-
-      {/* 2. THE SUBJECT */}
-      <h2
-        className="text-3xl text-gray-800"
-        style={{ fontFamily: 'var(--font-display)', fontWeight: 800, ...fadeUp(2) }}
       >
         {puzzle.subject}
       </h2>
@@ -648,30 +648,14 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
       {/* Divider */}
       <div
         className="w-16 h-px bg-gray-200 my-8"
-        style={fadeUp(2)}
+        style={fadeUp(1)}
       />
 
-      {/* 3. FOURBE SCORE BAR — headline result, shown first */}
-      <div
-        className="w-full max-w-sm mb-6"
-        style={fadeUp(3)}
-      >
-        <ScoreBar
-          label="Fourbe"
-          score={finalScore}
-          maxScore={MAX_FOURBE_SCORE}
-          colorClass={fourbeBarColor}
-          delay={0}
-          active={revealStep >= 3}
-        />
-      </div>
-
-      {/* 4. ROUND SCORE BARS — grouped below */}
+      {/* 2. ROUND SCORE BARS (all 5) */}
       <div
         className="w-full max-w-sm space-y-2.5 mb-8"
-        style={fadeUp(4)}
+        style={fadeUp(2)}
       >
-        <p className="text-xs font-medium text-gray-400 uppercase tracking-wider text-right pr-1 mb-1">Rounds</p>
         {puzzle.rounds.map((r, i) => {
           const result = results[i];
           const score = result?.score ?? 0;
@@ -684,17 +668,26 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
               maxScore={MAX_ROUND_SCORE}
               colorClass={solved ? 'bg-player' : 'bg-gray-300'}
               delay={i * 100}
-              active={revealStep >= 4}
+              active={revealStep >= 2}
               lives={result?.lives ?? 0}
             />
           );
         })}
+        <ScoreBar
+          label="Final"
+          score={finalScore}
+          maxScore={MAX_ROUND_SCORE}
+          colorClass={fourbeBarColor}
+          delay={400}
+          active={revealStep >= 2}
+          lives={finalResult?.lives ?? 0}
+        />
       </div>
 
-      {/* 5. TOTAL SCORE */}
+      {/* 3. TOTAL SCORE */}
       <div
         className="text-center mb-10"
-        style={fadeUp(5)}
+        style={fadeUp(3)}
       >
         <p className="text-5xl text-gray-800 tabular-nums mb-1" style={{ fontFamily: 'var(--font-display)', fontWeight: 800 }}>
           {animatedTotal.toLocaleString()}
@@ -702,15 +695,16 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
         <p className="text-sm text-gray-400">total points</p>
       </div>
 
-      {/* 6. ROUND DETAIL CARDS */}
+      {/* 4. ROUND DETAIL CARDS */}
       <div
         className="w-full max-w-md mb-10"
-        style={fadeUp(6)}
+        style={fadeUp(4)}
       >
         {puzzle.rounds.map((r, i) => {
           const result = results[i];
           const solved = result?.solved ?? false;
           const roundScore = result?.score ?? 0;
+          const charIndices = (r.connectionCharIndices ?? []).length > 0 ? r.connectionCharIndices : undefined;
           return (
             <div key={i}>
               {i > 0 && <div className="h-px bg-gray-100 my-4" />}
@@ -724,7 +718,7 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
                   {roundScore > 0 ? roundScore.toLocaleString() : '0'} pts
                 </span>
               </div>
-              <AnswerTileRow answer={r.answer} variant={solved ? 'solved' : 'failed'} availableWidth={availableWidth} />
+              <AnswerTileRow answer={r.answer} variant={solved ? 'solved' : 'failed'} availableWidth={availableWidth} highlightCharIndices={charIndices} />
               <p className={`text-sm italic mt-2 ${
                 solved ? 'text-green-700' : 'text-gray-400'
               }`}>
@@ -733,12 +727,31 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
             </div>
           );
         })}
+
+        {/* Final Round detail */}
+        <div className="h-px bg-gray-100 my-4" />
+        <div className="flex items-baseline justify-between mb-2">
+          <span className={`text-xs font-medium uppercase tracking-wider ${
+            finalSolved ? 'text-green-600' : 'text-gray-400'
+          }`}>
+            Final Round
+          </span>
+          <span className="text-xs font-medium text-gray-400 tabular-nums">
+            {finalScore > 0 ? finalScore.toLocaleString() : '0'} pts
+          </span>
+        </div>
+        <AnswerTileRow answer={puzzle.subject} variant={finalSolved ? 'solved' : 'failed'} availableWidth={availableWidth} />
+        {hintsUsed > 0 && (
+          <p className="text-xs text-gray-400 mt-2 text-center">
+            Hints used: {[hintsUsed >= 1 && 'Category', hintsUsed >= 2 && 'Connections', hintsUsed >= 3 && 'Vowels'].filter(Boolean).join(', ')}
+          </p>
+        )}
       </div>
 
-      {/* 7. ACTION BUTTONS */}
+      {/* 5. ACTION BUTTONS */}
       <div
         className="w-full max-w-sm"
-        style={fadeUp(7)}
+        style={fadeUp(5)}
       >
         {/* FEEDBACK */}
         {feedbackGiven ? (

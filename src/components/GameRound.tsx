@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
 import type { Round, RoundResult } from '../types';
 
 const MAX_LIVES = 4;
 const POINTS_PER_LIFE = 250;
-const BACKSTOP_DURATION = 300; // 5 minutes in seconds
 const TILE_MAX = 44;
 const TILE_MIN = 28;
 const TILE_GAP = 5;
@@ -38,21 +37,47 @@ function useAvailableWidth() {
   return width;
 }
 
+export interface GameRoundHandle {
+  deductLife: () => boolean;
+  addGuessedLetters: (letters: string[]) => void;
+  getLives: () => number;
+}
+
 interface GameRoundProps {
   round: Round;
   runningScore?: number;
   onRoundComplete?: (result: RoundResult) => void;
+  label?: string;
+  hideClue?: boolean;
+  headerContent?: React.ReactNode;
+  onLivesChange?: (lives: number) => void;
 }
 
-export default function GameRound({ round, runningScore = 0, onRoundComplete }: GameRoundProps) {
+const GameRound = forwardRef<GameRoundHandle, GameRoundProps>(function GameRound(
+  { round, runningScore = 0, onRoundComplete, label, hideClue, headerContent, onLivesChange },
+  ref
+) {
   const [state, setState] = useState<RoundState>('playing');
   const [guessedLetters, setGuessedLetters] = useState<Set<string>>(new Set());
   const [wrongGuessedLetters, setWrongGuessedLetters] = useState<Set<string>>(new Set());
-  const [lives, setLives] = useState(MAX_LIVES);
+  const [lives, setLivesState] = useState(MAX_LIVES);
   const [score, setScore] = useState(0);
   const [popCells, setPopCells] = useState<Set<number>>(new Set());
   const [wobbleKey, setWobbleKey] = useState<string | null>(null);
   const [depletedLife, setDepletedLife] = useState<number | null>(null);
+
+  // Refs for synchronous access from imperative handle
+  const livesRef = useRef(MAX_LIVES);
+  const guessedRef = useRef(new Set<string>());
+  const wrongRef = useRef(new Set<string>());
+  const stateRef = useRef<RoundState>('playing');
+
+  // Wrapped setters that keep refs in sync
+  const setLives = useCallback((v: number) => {
+    livesRef.current = v;
+    setLivesState(v);
+    onLivesChange?.(v);
+  }, [onLivesChange]);
 
   const upper = round.answer.toUpperCase();
   const availableWidth = useAvailableWidth();
@@ -75,15 +100,59 @@ export default function GameRound({ round, runningScore = 0, onRoundComplete }: 
     return guessedLetters.has(ch);
   });
 
-  // --- Invisible backstop timer ---
-  useEffect(() => {
-    if (state !== 'playing') return;
-    const timer = setTimeout(() => {
-      setState('lost');
-      setScore(0);
-    }, BACKSTOP_DURATION * 1000);
-    return () => clearTimeout(timer);
-  }, [state]);
+  // --- Imperative handle for external control (hints) ---
+  useImperativeHandle(ref, () => ({
+    deductLife: () => {
+      if (stateRef.current !== 'playing') return false;
+      if (livesRef.current <= 0) return false;
+      const newLives = livesRef.current - 1;
+      setLives(newLives);
+      setDepletedLife(newLives);
+      setTimeout(() => setDepletedLife(null), 400);
+      // Don't trigger loss — hints don't kill, only wrong guesses do
+      return true;
+    },
+    addGuessedLetters: (letters: string[]) => {
+      if (stateRef.current !== 'playing') return;
+
+      const newGuessed = new Set(guessedRef.current);
+      const newWrong = new Set(wrongRef.current);
+      const pops = new Set<number>();
+
+      for (const letter of letters) {
+        const up = letter.toUpperCase();
+        if (newGuessed.has(up) || newWrong.has(up)) continue;
+
+        if (upper.includes(up)) {
+          newGuessed.add(up);
+          for (let i = 0; i < upper.length; i++) {
+            if (upper[i] === up) pops.add(i);
+          }
+        } else {
+          newWrong.add(up);
+        }
+      }
+
+      guessedRef.current = newGuessed;
+      wrongRef.current = newWrong;
+      setGuessedLetters(new Set(newGuessed));
+      setWrongGuessedLetters(new Set(newWrong));
+
+      if (pops.size > 0) {
+        setPopCells(pops);
+        setTimeout(() => setPopCells(new Set()), 300);
+      }
+
+      // Auto-solve check
+      const complete = [...upper].every((ch) => !isLetter(ch) || newGuessed.has(ch));
+      if (complete) {
+        stateRef.current = 'won';
+        setState('won');
+        setScore(livesRef.current * POINTS_PER_LIFE);
+      }
+    },
+    getLives: () => livesRef.current,
+  }), [upper, setLives]);
 
   // Round-end transition
   const advancedRef = useRef(false);
@@ -122,14 +191,15 @@ export default function GameRound({ round, runningScore = 0, onRoundComplete }: 
 
   // --- Letter guess logic ---
   const handleLetterGuess = useCallback((key: string) => {
-    if (state !== 'playing') return;
-    if (guessedLetters.has(key)) return;
+    if (stateRef.current !== 'playing') return;
+    if (guessedRef.current.has(key)) return;
 
     const isInAnswer = upper.includes(key);
 
     if (isInAnswer) {
-      const newGuessed = new Set(guessedLetters);
+      const newGuessed = new Set(guessedRef.current);
       newGuessed.add(key);
+      guessedRef.current = newGuessed;
       setGuessedLetters(newGuessed);
 
       const newPops = new Set<number>();
@@ -142,29 +212,32 @@ export default function GameRound({ round, runningScore = 0, onRoundComplete }: 
       // Auto-solve: only check A-Z letter positions
       const complete = [...upper].every((ch) => !isLetter(ch) || newGuessed.has(ch));
       if (complete) {
+        stateRef.current = 'won';
         setState('won');
-        setScore(lives * POINTS_PER_LIFE);
+        setScore(livesRef.current * POINTS_PER_LIFE);
       }
     } else {
-      if (wrongGuessedLetters.has(key)) return;
+      if (wrongRef.current.has(key)) return;
 
-      const newWrong = new Set(wrongGuessedLetters);
+      const newWrong = new Set(wrongRef.current);
       newWrong.add(key);
+      wrongRef.current = newWrong;
       setWrongGuessedLetters(newWrong);
       setWobbleKey(key);
       setTimeout(() => setWobbleKey(null), 200);
 
-      const newLives = lives - 1;
+      const newLives = livesRef.current - 1;
       setLives(newLives);
       setDepletedLife(newLives);
       setTimeout(() => setDepletedLife(null), 400);
 
       if (newLives <= 0) {
+        stateRef.current = 'lost';
         setState('lost');
         setScore(0);
       }
     }
-  }, [state, guessedLetters, upper, wrongGuessedLetters, lives]);
+  }, [upper, setLives]);
 
   // --- Physical keyboard handler ---
   useEffect(() => {
@@ -220,13 +293,18 @@ export default function GameRound({ round, runningScore = 0, onRoundComplete }: 
 
       {/* Round label */}
       <div className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-2">
-        Round {round.round}
+        {label ?? `Round ${round.round}`}
       </div>
 
       {/* Clue */}
-      <h2 className="font-serif text-xl text-center text-gray-700 italic mb-3 max-w-md leading-relaxed min-h-[2.5rem] px-4">
-        {round.clue}
-      </h2>
+      {!hideClue && (
+        <h2 className="font-serif text-xl text-center text-gray-700 italic mb-3 max-w-md leading-relaxed min-h-[2.5rem] px-4">
+          {round.clue}
+        </h2>
+      )}
+
+      {/* Optional header content (e.g., revealed answers for final round) */}
+      {headerContent}
 
       {/* Letter board */}
       <div className="mb-6 self-stretch" style={{ maxWidth: 'calc(100vw - 2rem)' }}>
@@ -362,4 +440,6 @@ export default function GameRound({ round, runningScore = 0, onRoundComplete }: 
       )}
     </div>
   );
-}
+});
+
+export default GameRound;
