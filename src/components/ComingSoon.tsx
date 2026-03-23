@@ -30,8 +30,8 @@ export function ComingSoon() {
         href="https://forms.gle/DJ8BP2wqQjaSpniP9"
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-8 text-gray-400 hover:text-gray-600 transition-colors underline"
-        style={{ fontFamily: 'var(--font-sans)', fontSize: 14 }}
+        className="mt-10 px-6 py-3 bg-[#6aaa64] text-white rounded text-sm font-semibold hover:opacity-90 transition-opacity no-underline"
+        style={{ fontFamily: 'var(--font-sans)' }}
       >
         Get notified when we launch →
       </a>
