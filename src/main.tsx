@@ -73,7 +73,7 @@ createRoot(document.getElementById('root')!).render(
           }
         />
         <Route
-          path="/spyxxing-bee"
+          path="/spying-bee"
           element={
             <Suspense fallback={null}>
               <SpyxxingBee />
