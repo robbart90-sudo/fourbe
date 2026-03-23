@@ -44,10 +44,10 @@ function generateGrid() {
   const ws: WordSearchInstance = new WordSearch({
     cols: COLS,
     rows: ROWS,
-    disabledDirections: [],
+    disabledDirections: ["NW", "NE", "SW", "SE"],
     dictionary: DICTIONARY,
     maxWords: 20,
-    backwardsProbability: 0,
+    backwardsProbability: 0.5,
     upperCase: true,
   });
 
@@ -221,13 +221,18 @@ export default function SpyxxingBee() {
   // ── Shared helpers ──
 
   const checkWordMatch = useCallback((sequence: CellCoord[]): PlacedWord | null => {
+    const reversed = [...sequence].reverse();
     for (const word of wordsRef.current) {
       if (foundWordsRef.current.has(word.clean)) continue;
       if (word.path.length !== sequence.length) continue;
-      const matches = word.path.every(
+      const fwd = word.path.every(
         (p, i) => p.y === sequence[i].r && p.x === sequence[i].c
       );
-      if (matches) return word;
+      if (fwd) return word;
+      const rev = word.path.every(
+        (p, i) => p.y === reversed[i].r && p.x === reversed[i].c
+      );
+      if (rev) return word;
     }
     return null;
   }, []);
@@ -273,15 +278,17 @@ export default function SpyxxingBee() {
     failTimerRef.current = setTimeout(() => setFailingCells(new Set()), 300);
   }, []);
 
-  const isInStraightLine = useCallback((sequence: CellCoord[]): boolean => {
+  const isOnAxis = useCallback((sequence: CellCoord[]): boolean => {
     if (sequence.length <= 2) return true;
-    const dr = sequence[1].r - sequence[0].r;
-    const dc = sequence[1].c - sequence[0].c;
+    // Determine axis from first two cells
+    const isHorizontal = sequence[1].r === sequence[0].r;
+    const isVertical = sequence[1].c === sequence[0].c;
+    if (!isHorizontal && !isVertical) return false; // diagonal — not allowed
     for (let i = 2; i < sequence.length; i++) {
-      if (
-        sequence[i].r - sequence[i - 1].r !== dr ||
-        sequence[i].c - sequence[i - 1].c !== dc
-      ) return false;
+      const dr = Math.abs(sequence[i].r - sequence[i - 1].r);
+      const dc = Math.abs(sequence[i].c - sequence[i - 1].c);
+      if (isHorizontal && (sequence[i].r !== sequence[0].r || dc !== 1)) return false;
+      if (isVertical && (sequence[i].c !== sequence[0].c || dr !== 1)) return false;
     }
     return true;
   }, []);
@@ -303,13 +310,13 @@ export default function SpyxxingBee() {
       const last = prev[prev.length - 1];
       const dr = r - last.r;
       const dc = c - last.c;
-      const isAdj = Math.abs(dr) <= 1 && Math.abs(dc) <= 1 && (dr !== 0 || dc !== 0);
+      const isAdj = (Math.abs(dr) + Math.abs(dc)) === 1; // Cardinal only, no diagonals
 
       if (!isAdj) {
         newSeq = [{ r, c }];
       } else {
         const candidate = [...prev, { r, c }];
-        newSeq = isInStraightLine(candidate) ? candidate : [{ r, c }];
+        newSeq = isOnAxis(candidate) ? candidate : [{ r, c }];
       }
     }
 
@@ -329,7 +336,7 @@ export default function SpyxxingBee() {
       tapSequenceRef.current = [];
       setTapSequence([]);
     }, TAP_TIMEOUT);
-  }, [checkWordMatch, isInStraightLine, fireWordFound, triggerFail]);
+  }, [checkWordMatch, isOnAxis, fireWordFound, triggerFail]);
 
   // ── Drag/swipe mechanic ──
 
@@ -386,6 +393,15 @@ export default function SpyxxingBee() {
     const dr = Math.abs(cell.r - last.r);
     const dc = Math.abs(cell.c - last.c);
     if (dr > 1 || dc > 1) return; // Not adjacent
+    if (dr > 0 && dc > 0) return; // No diagonals
+
+    // Axis lock: after 2+ cells, only allow movement along the established axis
+    if (path.length >= 2) {
+      const isHorizontal = path[1].r === path[0].r;
+      const isVertical = path[1].c === path[0].c;
+      if (isHorizontal && cell.r !== path[0].r) return;
+      if (isVertical && cell.c !== path[0].c) return;
+    }
 
     // Backtrack: moving back to previous cell undoes the last step
     if (path.length >= 2) {
