@@ -68,27 +68,20 @@ function GameBoardIcon({ size = 32 }: { size?: number }) {
       {/* Outer frame with hard-edge shadow */}
       <rect x="2" y="2" width="28" height="28" rx="1" fill="#1A1A1A" />
       <rect x="0" y="0" width="28" height="28" rx="1" fill="#F5F0E8" stroke="#1A1A1A" strokeWidth="1" />
-      {/* Row 1: X X X */}
-      <rect x="2" y="2" width="7" height="7" rx="1" fill="#E8E0D4" />
-      <text x="5.5" y="7.2" fontFamily="Arial,sans-serif" fontWeight="bold" fontSize="5.5" fill="#1A1A1A" fillOpacity="0.35" textAnchor="middle">X</text>
-      <rect x="10.5" y="2" width="7" height="7" rx="1" fill="#E8E0D4" />
-      <text x="14" y="7.2" fontFamily="Arial,sans-serif" fontWeight="bold" fontSize="5.5" fill="#1A1A1A" fillOpacity="0.35" textAnchor="middle">X</text>
-      <rect x="19" y="2" width="7" height="7" rx="1" fill="#E8E0D4" />
-      <text x="22.5" y="7.2" fontFamily="Arial,sans-serif" fontWeight="bold" fontSize="5.5" fill="#1A1A1A" fillOpacity="0.35" textAnchor="middle">X</text>
-      {/* Row 2: S P Y */}
-      <rect x="2" y="10.5" width="7" height="7" rx="1" fill="#E8530E" />
-      <text x="5.5" y="15.7" fontFamily="Arial,sans-serif" fontWeight="bold" fontSize="5.5" fill="#fff" textAnchor="middle">S</text>
+      {/* 3×3 grid — X cells with center S */}
+      {[[0,0],[1,0],[2,0],[0,1],[2,1],[0,2],[1,2],[2,2]].map(([col, row]) => {
+        const cx = 2 + col * 8.5;
+        const cy = 2 + row * 8.5;
+        return (
+          <g key={`${col}-${row}`}>
+            <rect x={cx} y={cy} width="7" height="7" rx="1" fill="#F5F0E8" />
+            <text x={cx + 3.5} y={cy + 5.2} fontFamily="Arial,sans-serif" fontWeight="bold" fontSize="5.5" fill="#1A1A1A" fillOpacity="0.35" textAnchor="middle">X</text>
+          </g>
+        );
+      })}
+      {/* Center cell: S in orange-red */}
       <rect x="10.5" y="10.5" width="7" height="7" rx="1" fill="#E8530E" />
-      <text x="14" y="15.7" fontFamily="Arial,sans-serif" fontWeight="bold" fontSize="5.5" fill="#fff" textAnchor="middle">P</text>
-      <rect x="19" y="10.5" width="7" height="7" rx="1" fill="#E8530E" />
-      <text x="22.5" y="15.7" fontFamily="Arial,sans-serif" fontWeight="bold" fontSize="5.5" fill="#fff" textAnchor="middle">Y</text>
-      {/* Row 3: X X X */}
-      <rect x="2" y="19" width="7" height="7" rx="1" fill="#E8E0D4" />
-      <text x="5.5" y="24.2" fontFamily="Arial,sans-serif" fontWeight="bold" fontSize="5.5" fill="#1A1A1A" fillOpacity="0.35" textAnchor="middle">X</text>
-      <rect x="10.5" y="19" width="7" height="7" rx="1" fill="#E8E0D4" />
-      <text x="14" y="24.2" fontFamily="Arial,sans-serif" fontWeight="bold" fontSize="5.5" fill="#1A1A1A" fillOpacity="0.35" textAnchor="middle">X</text>
-      <rect x="19" y="19" width="7" height="7" rx="1" fill="#E8E0D4" />
-      <text x="22.5" y="24.2" fontFamily="Arial,sans-serif" fontWeight="bold" fontSize="5.5" fill="#1A1A1A" fillOpacity="0.35" textAnchor="middle">X</text>
+      <text x="14" y="15.7" fontFamily="Arial,sans-serif" fontWeight="bold" fontSize="5.5" fill="#fff" textAnchor="middle">S</text>
     </svg>
   );
 }
