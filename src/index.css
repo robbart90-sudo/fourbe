@@ -131,6 +131,16 @@ body {
   100% { background: transparent; }
 }
 
+@keyframes board-pulse {
+  0% { border-color: #1A1A1A; box-shadow: 5px 5px 0px #1A1A1A, inset 1px 1px 0px #E8E0D4; }
+  40% { border-color: #E8530E; box-shadow: 8px 8px 0px #1A1A1A, inset 1px 1px 0px #E8E0D4; }
+  100% { border-color: #1A1A1A; box-shadow: 5px 5px 0px #1A1A1A, inset 1px 1px 0px #E8E0D4; }
+}
+
+.spyxxing-grid-panel.board-pulse {
+  animation: board-pulse 0.3s ease-out;
+}
+
 .spyxxing-key:not([data-selected]):hover {
   box-shadow: 1px 1px 0px #1A1A1A !important;
   transform: translate(1px, 1px) !important;

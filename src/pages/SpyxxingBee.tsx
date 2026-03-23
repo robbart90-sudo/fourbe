@@ -104,6 +104,8 @@ export default function SpyxxingBee() {
   const [phase, setPhase] = useState<'start' | 'playing'>('start');
   const [showHtp, setShowHtp] = useState(() => !localStorage.getItem(HTP_SEEN_KEY));
   const [trailPoints, setTrailPoints] = useState<{ x: number; y: number }[]>([]);
+  const [boardPulse, setBoardPulse] = useState(false);
+  const [foundWordPaths, setFoundWordPaths] = useState<{ word: string; cells: { r: number; c: number }[] }[]>([]);
   const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -113,6 +115,7 @@ export default function SpyxxingBee() {
   const foundWordsRef = useRef<Set<string>>(new Set());
   const tapSequenceRef = useRef<CellCoord[]>([]);
   const gridRef = useRef<HTMLDivElement | null>(null);
+  const gridPanelRef = useRef<HTMLDivElement | null>(null);
   const isDraggingRef = useRef(false);
   const dragPathRef = useRef<CellCoord[]>([]);
   const pointerStartRef = useRef<{ x: number; y: number; r: number; c: number } | null>(null);
@@ -140,6 +143,7 @@ export default function SpyxxingBee() {
     setFailingCells(new Set());
     setRedactingCells(new Map());
     setFlareSet(new Set());
+    setFoundWordPaths([]);
     setRevealActive(false);
     setElapsed(0);
     setGameOver(false);
@@ -277,6 +281,17 @@ export default function SpyxxingBee() {
     setFlareSet(foundKeys);
     setTimeout(() => setFlareSet(new Set()), 500);
     setFoundWords(prev => new Set([...prev, matched.clean]));
+
+    // Board pulse
+    setBoardPulse(true);
+    setTimeout(() => setBoardPulse(false), 300);
+
+    // Store word path for rounded rectangle overlay
+    setFoundWordPaths(prev => [...prev, {
+      word: matched.clean,
+      cells: matched.path.map(p => ({ r: p.y, c: p.x })),
+    }]);
+
     console.log('Found word:', matched.clean);
   }, []);
 
@@ -1158,7 +1173,8 @@ export default function SpyxxingBee() {
 
       {/* Grid panel */}
       <div
-        className="spyxxing-grid-panel"
+        ref={gridPanelRef}
+        className={`spyxxing-grid-panel${boardPulse ? ' board-pulse' : ''}`}
         style={{
           background: '#F5F0E8',
           padding: 'clamp(6px, 2vw, 16px)',
@@ -1323,6 +1339,32 @@ export default function SpyxxingBee() {
               />
             </svg>
           )}
+          {/* Found word rounded rectangles */}
+          {foundWordPaths.map(({ word, cells }) => {
+            const minR = Math.min(...cells.map(c => c.r));
+            const maxR = Math.max(...cells.map(c => c.r));
+            const minC = Math.min(...cells.map(c => c.c));
+            const maxC = Math.max(...cells.map(c => c.c));
+            const pad = 3; // px padding around the rectangle
+            const cellW = 100 / COLS;
+            const cellH = 100 / ROWS;
+            return (
+              <div
+                key={word}
+                style={{
+                  position: 'absolute',
+                  pointerEvents: 'none',
+                  zIndex: 5,
+                  left: `calc(${minC * cellW}% - ${pad}px)`,
+                  top: `calc(${minR * cellH}% - ${pad}px)`,
+                  width: `calc(${(maxC - minC + 1) * cellW}% + ${pad * 2}px)`,
+                  height: `calc(${(maxR - minR + 1) * cellH}% + ${pad * 2}px)`,
+                  border: '1.5px solid rgba(232, 83, 14, 0.2)',
+                  borderRadius: 7,
+                }}
+              />
+            );
+          })}
         </div>
       </div>
 
