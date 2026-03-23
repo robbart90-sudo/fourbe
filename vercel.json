@@ -1,3 +1,7 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/keylocker", "destination": "/keylocker.html" },
+    { "source": "/spying-bee", "destination": "/spying-bee.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
