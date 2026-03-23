@@ -377,14 +377,7 @@ export default function SpyxxingBee() {
     if (!isDraggingRef.current) return;
 
     const cell = getCellFromPoint(e.clientX, e.clientY);
-    if (!cell) {
-      // Pointer left the grid — cancel drag silently
-      pointerStartRef.current = null;
-      isDraggingRef.current = false;
-      dragPathRef.current = [];
-      setDragPath([]);
-      return;
-    }
+    if (!cell) return; // Pointer in gap or off-grid — just ignore, keep path
 
     const path = dragPathRef.current;
     const last = path[path.length - 1];
@@ -441,6 +434,13 @@ export default function SpyxxingBee() {
 
     try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* already released */ }
   }, [checkWordMatch, fireWordFound, triggerFail, handleCellTap]);
+
+  const handleGridPointerCancel = useCallback(() => {
+    pointerStartRef.current = null;
+    isDraggingRef.current = false;
+    dragPathRef.current = [];
+    setDragPath([]);
+  }, []);
 
   const toggleLetter = useCallback((letter: string) => {
     setSelectedLetters(prev => {
@@ -1044,7 +1044,7 @@ export default function SpyxxingBee() {
           className="grid"
           style={{
             gridTemplateColumns: `repeat(${COLS}, 1fr)`,
-            gap: 3,
+            gap: 0,
             touchAction: 'none',
             cursor: 'crosshair',
             position: 'relative',
@@ -1052,6 +1052,7 @@ export default function SpyxxingBee() {
           onPointerDown={handleGridPointerDown}
           onPointerMove={handleGridPointerMove}
           onPointerUp={handleGridPointerUp}
+          onPointerCancel={handleGridPointerCancel}
         >
           {grid.map((row, ri) =>
             row.map((letter, ci) => {
@@ -1111,6 +1112,8 @@ export default function SpyxxingBee() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontSize: 'clamp(24px, 6vw, 32px)',
+                    padding: 1,
+                    touchAction: 'none',
                     color: cellColor,
                     fontWeight,
                     opacity: cellOpacity,
@@ -1129,7 +1132,7 @@ export default function SpyxxingBee() {
                         : 'none',
                   }}
                 >
-                  {isVisible || isActive ? letter : 'X'}
+                  {isVisible ? letter : 'X'}
                   {/* Redaction bar overlay */}
                   {isRedacting && (
                     <div
