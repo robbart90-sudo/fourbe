@@ -630,11 +630,11 @@ export default function SpyxxingBee() {
         <p
           style={{
             fontFamily: "'Inter', sans-serif",
-            fontSize: '0.85rem',
-            fontWeight: 500,
+            fontSize: 'clamp(18px, 4vw, 22px)',
+            fontWeight: 700,
             color: '#1A1A1A',
             opacity: 0.5,
-            marginTop: 20,
+            marginTop: 28,
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
           }}
@@ -646,22 +646,22 @@ export default function SpyxxingBee() {
         {showHtp && (
           <div
             style={{
-              marginTop: 28,
-              maxWidth: 380,
-              padding: '0 8px',
+              marginTop: 36,
+              maxWidth: 440,
+              padding: '0 12px',
             }}
           >
             {/* Flavor text */}
             <p
               style={{
                 fontFamily: "'Inter', sans-serif",
-                fontSize: '0.8rem',
+                fontSize: 'clamp(16px, 3.5vw, 20px)',
                 fontWeight: 400,
                 color: '#1A1A1A',
                 opacity: 0.45,
-                lineHeight: 1.6,
+                lineHeight: 1.7,
                 textAlign: 'center',
-                margin: '0 0 16px',
+                margin: '0 0 28px',
               }}
             >
               The enemy scrambled your secret word scrambler. Ironic!
@@ -670,23 +670,36 @@ export default function SpyxxingBee() {
             </p>
 
             {/* Instructions */}
-            <ul
+            <div
               style={{
-                fontFamily: "'Inter', sans-serif",
-                fontSize: '0.85rem',
-                fontWeight: 500,
-                color: '#1A1A1A',
-                lineHeight: 1.7,
-                paddingLeft: 20,
-                margin: 0,
-                listStyleType: 'disc',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 14,
               }}
             >
-              <li>Submit three letters at a time.</li>
-              <li>Reveal those letters and their neighbors temporarily.</li>
-              <li>Find all the hidden root words for the theme.</li>
-              <li>Get back home in time for a spot of tea.</li>
-            </ul>
+              {[
+                ['Guess', 'words that fit the theme.'],
+                ['Select', 'three letters to reveal where they hide.'],
+                ['Swipe', 'across the grid to trace words you\u2019ve found.'],
+                ['Race', 'the clock \u2014 your time is your score.'],
+              ].map(([bold, rest]) => (
+                <p
+                  key={bold}
+                  style={{
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: 'clamp(18px, 4vw, 24px)',
+                    fontWeight: 500,
+                    color: '#1A1A1A',
+                    lineHeight: 1.6,
+                    margin: 0,
+                    textAlign: 'center',
+                  }}
+                >
+                  <strong style={{ color: '#E8530E', fontWeight: 700 }}>{bold}</strong>{' '}
+                  {rest}
+                </p>
+              ))}
+            </div>
           </div>
         )}
 
@@ -696,10 +709,11 @@ export default function SpyxxingBee() {
           className="cursor-pointer spyxxing-play-btn"
           style={{
             fontFamily: "'Archivo Black', sans-serif",
-            fontSize: '1.1rem',
+            fontSize: 'clamp(1.1rem, 4vw, 1.4rem)',
             letterSpacing: '0.06em',
-            marginTop: showHtp ? 32 : 28,
-            padding: '14px 48px',
+            marginTop: showHtp ? 40 : 32,
+            padding: '18px 48px',
+            minWidth: 'min(100%, 280px)',
             background: '#1A1A1A',
             color: '#FFFFFF',
             border: '2px solid #1A1A1A',
@@ -918,36 +932,50 @@ export default function SpyxxingBee() {
             <p
               style={{
                 fontFamily: "'Inter', sans-serif",
-                fontSize: '0.8rem',
+                fontSize: '0.85rem',
                 fontWeight: 400,
                 color: '#1A1A1A',
                 opacity: 0.45,
-                lineHeight: 1.6,
+                lineHeight: 1.7,
                 textAlign: 'center',
-                margin: '0 0 16px',
+                margin: '0 0 20px',
               }}
             >
               The enemy scrambled your secret word scrambler. Ironic!
               <br />
               Good thing a great spy never forgets their scrambling de-scrambler.
             </p>
-            <ul
+            <div
               style={{
-                fontFamily: "'Inter', sans-serif",
-                fontSize: '0.85rem',
-                fontWeight: 500,
-                color: '#1A1A1A',
-                lineHeight: 1.7,
-                paddingLeft: 20,
-                margin: '0 0 20px',
-                listStyleType: 'disc',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 10,
+                marginBottom: 20,
               }}
             >
-              <li>Submit three letters at a time.</li>
-              <li>Reveal those letters and their neighbors temporarily.</li>
-              <li>Find all the hidden root words for the theme.</li>
-              <li>Get back home in time for a spot of tea.</li>
-            </ul>
+              {[
+                ['Guess', 'words that fit the theme.'],
+                ['Select', 'three letters to reveal where they hide.'],
+                ['Swipe', 'across the grid to trace words you\u2019ve found.'],
+                ['Race', 'the clock \u2014 your time is your score.'],
+              ].map(([bold, rest]) => (
+                <p
+                  key={bold}
+                  style={{
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: '0.95rem',
+                    fontWeight: 500,
+                    color: '#1A1A1A',
+                    lineHeight: 1.6,
+                    margin: 0,
+                    textAlign: 'center',
+                  }}
+                >
+                  <strong style={{ color: '#E8530E', fontWeight: 700 }}>{bold}</strong>{' '}
+                  {rest}
+                </p>
+              ))}
+            </div>
             <div style={{ textAlign: 'center' }}>
               <button
                 onClick={closeHtp}
