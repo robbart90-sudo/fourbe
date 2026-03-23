@@ -903,6 +903,33 @@ export default function Keylocker() {
   const [showHtp, setShowHtp] = useState(() => !localStorage.getItem(HTP_SEEN_KEY));
   const isTouchDevice = useRef(typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0));
 
+  // Favicon + title + OG swap
+  useEffect(() => {
+    const link = document.querySelector("link[rel='icon']") as HTMLLinkElement | null;
+    const prev = link?.href;
+    if (link) link.href = '/keylocker-favicon.svg';
+    document.title = 'Keylocker';
+
+    const ogTags: Record<string, string> = {
+      'og:title': 'Keylocker',
+      'og:description': 'Crack the combination. One key at a time.',
+      'og:image': '/og-keylocker.png',
+    };
+    const prevOg: Record<string, string> = {};
+    for (const [prop, value] of Object.entries(ogTags)) {
+      const el = document.querySelector(`meta[property="${prop}"]`) as HTMLMetaElement | null;
+      if (el) { prevOg[prop] = el.content; el.content = value; }
+    }
+
+    return () => {
+      if (link && prev) link.href = prev;
+      for (const [prop, value] of Object.entries(prevOg)) {
+        const el = document.querySelector(`meta[property="${prop}"]`) as HTMLMetaElement | null;
+        if (el) el.content = value;
+      }
+    };
+  }, []);
+
   const target = useMemo(() => {
     if (playtestIndex !== null) return PLAYTEST_PUZZLES[playtestIndex];
     return getTodaysWord(ANSWERS);

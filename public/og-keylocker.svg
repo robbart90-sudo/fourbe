@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="1200" height="630" fill="#0a0a0f"/>
+  <!-- 2×3 grid with subtle glow -->
+  <g transform="translate(490, 100)" filter="url(#glow)">
+    <!-- Col 1 -->
+    <rect x="0" y="0" width="80" height="60" rx="8" fill="#ffffff"/>
+    <rect x="0" y="72" width="80" height="60" rx="8" fill="#ffffff"/>
+    <!-- Keyhole -->
+    <circle cx="40" cy="95" r="10" fill="#0a0a0f"/>
+    <rect x="35" y="101" width="10" height="14" rx="2" fill="#0a0a0f"/>
+    <rect x="0" y="144" width="80" height="60" rx="8" fill="#ffffff"/>
+    <!-- Col 2 -->
+    <rect x="92" y="0" width="80" height="60" rx="8" fill="#ffffff"/>
+    <rect x="92" y="72" width="80" height="60" rx="8" fill="#0a0a0f" stroke="#ffffff" stroke-width="3"/>
+    <rect x="92" y="144" width="80" height="60" rx="8" fill="#ffffff"/>
+  </g>
+  <!-- KEYLOCKER text -->
+  <text x="600" y="420" font-family="'Space Mono', monospace, Courier" font-weight="700" font-size="64" fill="#ffffff" text-anchor="middle" letter-spacing="-1">KEYLOCKER</text>
+  <!-- Tagline -->
+  <text x="600" y="480" font-family="'Space Mono', monospace, Courier" font-size="22" fill="#ffffff" fill-opacity="0.4" text-anchor="middle">Crack the combination. One key at a time.</text>
+</svg>

@@ -160,14 +160,30 @@ export default function SpyxxingBee() {
     }, 1000);
   }, []);
 
-  // Favicon swap
+  // Favicon + title + OG swap
   useEffect(() => {
     const link = document.querySelector("link[rel='icon']") as HTMLLinkElement | null;
     const prev = link?.href;
     if (link) link.href = '/spyxxing-bee-favicon.svg';
     document.title = 'Spying Bee';
+
+    const ogTags: Record<string, string> = {
+      'og:title': 'Spying Bee',
+      'og:description': 'Word find with a secret twist.',
+      'og:image': '/og-spyxxing-bee.png',
+    };
+    const prevOg: Record<string, string> = {};
+    for (const [prop, value] of Object.entries(ogTags)) {
+      const el = document.querySelector(`meta[property="${prop}"]`) as HTMLMetaElement | null;
+      if (el) { prevOg[prop] = el.content; el.content = value; }
+    }
+
     return () => {
       if (link && prev) link.href = prev;
+      for (const [prop, value] of Object.entries(prevOg)) {
+        const el = document.querySelector(`meta[property="${prop}"]`) as HTMLMetaElement | null;
+        if (el) el.content = value;
+      }
     };
   }, []);
 

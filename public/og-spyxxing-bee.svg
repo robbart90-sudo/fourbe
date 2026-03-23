@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <rect width="1200" height="630" fill="#ffffff"/>
+  <!-- Hard-edge shadow panel -->
+  <rect x="308" y="138" width="600" height="360" rx="3" fill="#1A1A1A"/>
+  <rect x="300" y="130" width="600" height="360" rx="3" fill="#ffffff" stroke="#1A1A1A" stroke-width="3"/>
+  <!-- Top bar -->
+  <rect x="470" y="180" width="260" height="8" rx="1" fill="#E8530E"/>
+  <!-- SPYXXING BEE wordmark -->
+  <text x="600" y="270" font-family="'Archivo Black', Arial Black, sans-serif" font-weight="900" font-size="72" text-anchor="middle" letter-spacing="-3">
+    <tspan fill="#1A1A1A">SPY</tspan><tspan fill="#E8530E">XX</tspan><tspan fill="#1A1A1A">ING BEE</tspan>
+  </text>
+  <!-- Bottom bar -->
+  <rect x="470" y="290" width="260" height="8" rx="1" fill="#E8530E"/>
+  <!-- Tagline -->
+  <text x="600" y="370" font-family="Arial, sans-serif" font-size="26" fill="#1A1A1A" fill-opacity="0.45" text-anchor="middle">Word find with a secret twist.</text>
+</svg>
