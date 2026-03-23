@@ -164,7 +164,7 @@ export default function SpyxxingBee() {
     const link = document.querySelector("link[rel='icon']") as HTMLLinkElement | null;
     const prev = link?.href;
     if (link) link.href = '/spyxxing-bee-favicon.svg';
-    document.title = 'SpyXXing Bee';
+    document.title = 'Spying Bee';
     return () => {
       if (link && prev) link.href = prev;
     };
