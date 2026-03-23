@@ -1,21 +1,6 @@
-import { useState } from 'react';
 import { FourbeLogo } from './FourbeLogo';
 
 export function ComingSoon() {
-  const [email, setEmail] = useState('');
-  const [submitted, setSubmitted] = useState(false);
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!email.trim()) return;
-    const emails: string[] = JSON.parse(localStorage.getItem('fourbe-notify-emails') || '[]');
-    if (!emails.includes(email.trim())) {
-      emails.push(email.trim());
-      localStorage.setItem('fourbe-notify-emails', JSON.stringify(emails));
-    }
-    setSubmitted(true);
-  }
-
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-white px-6">
       <FourbeLogo />
@@ -41,34 +26,15 @@ export function ComingSoon() {
         A daily puzzle game. Four clues. One hidden subject.
       </p>
 
-      <div className="mt-10 w-full max-w-xs">
-        {submitted ? (
-          <p
-            className="text-center text-[#6aaa64]"
-            style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 14 }}
-          >
-            We'll let you know when we launch!
-          </p>
-        ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded text-sm focus:outline-none focus:border-[#6aaa64]"
-              style={{ fontFamily: 'var(--font-sans)' }}
-            />
-            <button
-              type="submit"
-              className="w-full py-3 bg-[#6aaa64] text-white rounded text-sm font-semibold cursor-pointer hover:opacity-90 transition-opacity border-none"
-              style={{ fontFamily: 'var(--font-sans)' }}
-            >
-              Notify Me
-            </button>
-          </form>
-        )}
-      </div>
+      <a
+        href="https://forms.gle/DJ8BP2wqQjaSpniP9"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-8 text-gray-400 hover:text-gray-600 transition-colors underline"
+        style={{ fontFamily: 'var(--font-sans)', fontSize: 14 }}
+      >
+        Get notified when we launch →
+      </a>
     </div>
   );
 }
