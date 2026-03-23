@@ -325,7 +325,6 @@ export default function SpyxxingBee() {
     setTapSequence(newSeq);
 
     tapTimerRef.current = setTimeout(() => {
-      triggerFail(tapSequenceRef.current);
       tapSequenceRef.current = [];
       setTapSequence([]);
     }, TAP_TIMEOUT);
@@ -1156,7 +1155,7 @@ export default function SpyxxingBee() {
                     opacity: cellOpacity,
                     transition: isFlaring
                       ? 'color 0.5s ease'
-                      : 'opacity 0.3s ease, background 0.15s ease',
+                      : 'opacity 0.3s ease',
                     background: isFailing
                       ? 'rgba(232, 83, 14, 0.25)'
                       : isActive
