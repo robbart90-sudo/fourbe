@@ -51,10 +51,11 @@ interface GameRoundProps {
   hideClue?: boolean;
   headerContent?: React.ReactNode;
   onLivesChange?: (lives: number) => void;
+  compact?: boolean;
 }
 
 const GameRound = forwardRef<GameRoundHandle, GameRoundProps>(function GameRound(
-  { round, runningScore = 0, onRoundComplete, label, hideClue, headerContent, onLivesChange },
+  { round, runningScore = 0, onRoundComplete, label, hideClue, headerContent, onLivesChange, compact },
   ref
 ) {
   const [state, setState] = useState<RoundState>('playing');
@@ -283,7 +284,7 @@ const GameRound = forwardRef<GameRoundHandle, GameRoundProps>(function GameRound
   }
 
   return (
-    <div className="flex flex-col items-center pt-6 pb-16 min-h-[calc(100vh-52px)] relative">
+    <div className={`flex flex-col items-center ${compact ? 'pt-2 pb-4' : 'pt-6 pb-16'} min-h-[calc(100vh-52px)] relative`}>
       {/* Running score */}
       {runningScore > 0 && (
         <div className="absolute top-2 right-0 text-sm text-gray-300 tabular-nums font-sans">
@@ -292,7 +293,7 @@ const GameRound = forwardRef<GameRoundHandle, GameRoundProps>(function GameRound
       )}
 
       {/* Round label */}
-      <div className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-2">
+      <div className={`text-xs font-medium text-gray-400 uppercase tracking-widest ${compact ? 'mb-1' : 'mb-2'}`}>
         {label ?? `Round ${round.round}`}
       </div>
 
@@ -307,7 +308,7 @@ const GameRound = forwardRef<GameRoundHandle, GameRoundProps>(function GameRound
       {headerContent}
 
       {/* Letter board */}
-      <div className="mb-6 self-stretch" style={{ maxWidth: 'calc(100vw - 2rem)' }}>
+      <div className={`${compact ? 'mb-3' : 'mb-6'} self-stretch`} style={{ maxWidth: 'calc(100vw - 2rem)' }}>
         <div className="flex flex-wrap justify-center" style={{ gap: `5px ${wordGap}px` }}>
           {upper.split(' ').reduce<{ elements: React.ReactNode[]; globalIdx: number }>(
             (acc, word, wi) => {
@@ -360,7 +361,7 @@ const GameRound = forwardRef<GameRoundHandle, GameRoundProps>(function GameRound
 
       {/* Lives display */}
       {state === 'playing' && (
-        <div className="flex gap-2 mb-6">
+        <div className={`flex gap-2 ${compact ? 'mb-3' : 'mb-6'}`}>
           {Array.from({ length: MAX_LIVES }, (_, i) => {
             const isFilled = i < lives;
             const justDepleted = depletedLife !== null && i === depletedLife;

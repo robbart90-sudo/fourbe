@@ -511,38 +511,43 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
     };
 
     const finalHeaderContent = (
-      <div className="w-full max-w-md mb-4">
-        {/* 4 revealed answers */}
-        {puzzle.rounds.map((r, i) => {
-          const result = results[i];
-          const solved = result?.solved ?? false;
-          const indices = (hintsUsed >= 2 && (r.connectionCharIndices ?? []).length > 0)
-            ? r.connectionCharIndices
-            : undefined;
-          return (
-            <div key={i}>
-              {i > 0 && <div className="h-px bg-gray-100 my-3" />}
-              <AnswerTileRow
-                answer={r.answer}
-                variant={solved ? 'solved' : 'failed'}
-                availableWidth={availableWidth}
-                highlightCharIndices={indices}
-              />
-              <p className="text-xs text-gray-400 italic mt-1.5 text-center">{r.clue}</p>
-              {hintsUsed >= 2 && r.connection && (
-                <p className="text-[10px] text-amber-600 mt-0.5 text-center">{r.connection}</p>
-              )}
-            </div>
-          );
-        })}
+      <div className="w-full max-w-md mb-2">
+        {/* 4 compact answers — 2×2 grid on wider, stacked on narrow */}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-3" style={{ gridTemplateColumns: availableWidth >= 340 ? '1fr 1fr' : '1fr' }}>
+          {puzzle.rounds.map((r, i) => {
+            const result = results[i];
+            const solved = result?.solved ?? false;
+            const upper = r.answer.toUpperCase();
+            const highlightSet = (hintsUsed >= 2 && (r.connectionCharIndices ?? []).length > 0)
+              ? new Set(r.connectionCharIndices)
+              : null;
+            const greenClass = solved ? 'text-player' : 'text-gray-400';
+            return (
+              <div key={i} className="min-w-0">
+                <p className="text-[11px] font-bold uppercase tracking-wide leading-tight break-words">
+                  <span className="text-[10px] text-gray-300 font-medium mr-1">{i + 1}</span>
+                  {[...upper].map((ch, ci) =>
+                    highlightSet?.has(ci)
+                      ? <span key={ci} style={{ color: '#E8530E' }}>{ch}</span>
+                      : <span key={ci} className={greenClass}>{ch}</span>
+                  )}
+                </p>
+                <p className="text-[10px] text-gray-400 italic leading-tight mt-0.5">{r.clue}</p>
+                {hintsUsed >= 2 && r.connection && (
+                  <p className="text-[10px] leading-tight mt-0.5" style={{ color: '#E8530E' }}>{r.connection}</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
 
         {/* Hint buttons */}
-        <div className="flex gap-2 mt-5 mb-2">
+        <div className="flex gap-1.5 mb-1">
           <button
             type="button"
             onClick={handleHint1}
             disabled={isHintDisabled(1)}
-            className={`flex-1 px-2 py-2 text-[11px] font-medium rounded-lg border transition-colors text-center ${hintBtnClass(1)}`}
+            className={`flex-1 px-1.5 py-1.5 text-[11px] font-medium rounded-lg border transition-colors text-center ${hintBtnClass(1)}`}
           >
             {hintsUsed >= 1 ? (
               <span>Category<br /><span className="text-[10px] font-normal">{puzzle.subjectCategory || '???'}</span></span>
@@ -554,7 +559,7 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
             type="button"
             onClick={handleHint2}
             disabled={isHintDisabled(2)}
-            className={`flex-1 px-2 py-2 text-[11px] font-medium rounded-lg border transition-colors text-center ${hintBtnClass(2)}`}
+            className={`flex-1 px-1.5 py-1.5 text-[11px] font-medium rounded-lg border transition-colors text-center ${hintBtnClass(2)}`}
           >
             {hintsUsed >= 2 ? (
               <span>Connections<br /><span className="text-[10px] font-normal">Revealed</span></span>
@@ -570,7 +575,7 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
             type="button"
             onClick={handleHint3}
             disabled={isHintDisabled(3)}
-            className={`flex-1 px-2 py-2 text-[11px] font-medium rounded-lg border transition-colors text-center ${hintBtnClass(3)}`}
+            className={`flex-1 px-1.5 py-1.5 text-[11px] font-medium rounded-lg border transition-colors text-center ${hintBtnClass(3)}`}
           >
             {hintsUsed >= 3 ? (
               <span>Vowels<br /><span className="text-[10px] font-normal">Placed</span></span>
@@ -586,7 +591,7 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
 
         {/* Category display when hint 1 is used */}
         {hintsUsed >= 1 && (
-          <p className="text-sm font-medium text-gray-500 text-center mt-2 mb-1">
+          <p className="text-xs font-medium text-gray-500 text-center mt-1 mb-0.5">
             Category: <span className="text-gray-800">{puzzle.subjectCategory || '???'}</span>
           </p>
         )}
@@ -601,8 +606,9 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
           runningScore={runningScore}
           onRoundComplete={handleFinalRoundComplete}
           onLivesChange={setFinalLives}
-          label="Final Round"
+          label="Fourbe"
           hideClue
+          compact
           headerContent={finalHeaderContent}
         />
         {showLeaveConfirm && (
