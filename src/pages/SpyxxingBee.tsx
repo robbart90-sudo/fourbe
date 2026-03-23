@@ -1031,34 +1031,90 @@ export default function SpyxxingBee() {
         {THEME_NAME} — {words.length} words
       </p>
 
-      {/* Progress */}
-      <p
-        style={{
-          fontFamily: "'Inter', sans-serif",
-          fontSize: '0.95rem',
-          fontWeight: 600,
-          color: foundWords.size > 0 ? '#E8530E' : '#1A1A1A',
-          opacity: foundWords.size > 0 ? 1 : 0.35,
-          marginTop: 4,
-        }}
-      >
-        {foundWords.size} / {words.length} found
-      </p>
-
-      {/* Timer */}
-      <div
-        style={{
-          fontFamily: "'VT323', monospace",
-          fontSize: '1.8rem',
-          color: '#1A1A1A',
-          opacity: 0.7,
-          marginTop: 6,
-          marginBottom: 12,
-          lineHeight: 1,
-        }}
-      >
-        {formatTime(elapsed)}
-      </div>
+      {/* Progress row: found words (left) | counter + timer (center) | found words (right) */}
+      {(() => {
+        const foundList = words.filter(w => foundWords.has(w.clean));
+        const half = Math.ceil(words.length / 2);
+        const leftWords = foundList.slice(0, half);
+        const rightWords = foundList.slice(half);
+        return (
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              width: 'min(calc(100vw - 24px), 440px)',
+              marginTop: 4,
+              marginBottom: 12,
+              minHeight: 56,
+            }}
+          >
+            {/* Left zone */}
+            <div style={{ flex: '1 1 0', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+              {leftWords.map(w => (
+                <span
+                  key={w.clean}
+                  style={{
+                    fontFamily: "'Archivo Black', sans-serif",
+                    fontSize: '0.8rem',
+                    color: '#E8530E',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    lineHeight: 1.3,
+                  }}
+                >
+                  {w.clean}
+                </span>
+              ))}
+            </div>
+            {/* Center: counter + timer */}
+            <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <p
+                style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: '0.95rem',
+                  fontWeight: 600,
+                  color: foundWords.size > 0 ? '#E8530E' : '#1A1A1A',
+                  opacity: foundWords.size > 0 ? 1 : 0.35,
+                  margin: 0,
+                }}
+              >
+                {foundWords.size} / {words.length} found
+              </p>
+              <div
+                style={{
+                  fontFamily: "'VT323', monospace",
+                  fontSize: '1.8rem',
+                  color: '#1A1A1A',
+                  opacity: 0.7,
+                  marginTop: 4,
+                  lineHeight: 1,
+                }}
+              >
+                {formatTime(elapsed)}
+              </div>
+            </div>
+            {/* Right zone */}
+            <div style={{ flex: '1 1 0', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+              {rightWords.map(w => (
+                <span
+                  key={w.clean}
+                  style={{
+                    fontFamily: "'Archivo Black', sans-serif",
+                    fontSize: '0.8rem',
+                    color: '#E8530E',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    lineHeight: 1.3,
+                  }}
+                >
+                  {w.clean}
+                </span>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Grid panel */}
       <div
