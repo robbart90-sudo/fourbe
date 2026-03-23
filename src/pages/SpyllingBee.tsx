@@ -1,0 +1,1110 @@
+import { useState, useEffect, useCallback, useRef } from 'react';
+import WordSearch from '@blex41/word-search';
+
+interface WordPath {
+  x: number;
+  y: number;
+}
+
+interface PlacedWord {
+  word: string;
+  clean: string;
+  path: WordPath[];
+}
+
+type CellState = 'hidden' | 'revealed' | 'found' | 'adjacent';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type WordSearchInstance = any;
+
+const DICTIONARY = ["BACON", "EGGS", "TOAST", "COFFEE", "JUICE", "WAFFLE", "CEREAL", "PANCAKE"];
+const THEME_NAME = 'Breakfast';
+const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+const HTP_SEEN_KEY = 'spylling-bee-played-before';
+const ROWS = 12;
+const COLS = 12;
+const MAX_SELECTED = 3;
+const REVEAL_DURATION = 8000;
+const REDACT_BAR_MS = 200;
+const REDACT_STAGGER_MS = 35;
+const TAP_TIMEOUT = 3000;
+
+interface CellCoord {
+  r: number;
+  c: number;
+}
+
+function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function generateGrid() {
+  const ws: WordSearchInstance = new WordSearch({
+    cols: COLS,
+    rows: ROWS,
+    disabledDirections: [],
+    dictionary: DICTIONARY,
+    maxWords: 20,
+    backwardsProbability: 0,
+    upperCase: true,
+  });
+
+  console.log('Placed words:', ws.data.words);
+
+  const placedCleans = new Set(ws.data.words.map((w: PlacedWord) => w.clean));
+  const unplaced = DICTIONARY.filter(w => !placedCleans.has(w));
+  if (unplaced.length > 0) {
+    console.warn('Unplaced words:', unplaced);
+  }
+
+  return { grid: ws.data.grid as string[][], words: ws.data.words as PlacedWord[] };
+}
+
+function GameBoardIcon({ size = 32 }: { size?: number }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width={size} height={size}>
+      {/* Outer frame with hard-edge shadow */}
+      <rect x="2" y="2" width="28" height="28" rx="1" fill="#1A1A1A" />
+      <rect x="0" y="0" width="28" height="28" rx="1" fill="#F5F0E8" stroke="#1A1A1A" strokeWidth="1" />
+      {/* Row 1: X X X */}
+      <rect x="2" y="2" width="7" height="7" rx="1" fill="#E8E0D4" />
+      <text x="5.5" y="7.2" fontFamily="Arial,sans-serif" fontWeight="bold" fontSize="5.5" fill="#1A1A1A" fillOpacity="0.35" textAnchor="middle">X</text>
+      <rect x="10.5" y="2" width="7" height="7" rx="1" fill="#E8E0D4" />
+      <text x="14" y="7.2" fontFamily="Arial,sans-serif" fontWeight="bold" fontSize="5.5" fill="#1A1A1A" fillOpacity="0.35" textAnchor="middle">X</text>
+      <rect x="19" y="2" width="7" height="7" rx="1" fill="#E8E0D4" />
+      <text x="22.5" y="7.2" fontFamily="Arial,sans-serif" fontWeight="bold" fontSize="5.5" fill="#1A1A1A" fillOpacity="0.35" textAnchor="middle">X</text>
+      {/* Row 2: S P Y */}
+      <rect x="2" y="10.5" width="7" height="7" rx="1" fill="#E8530E" />
+      <text x="5.5" y="15.7" fontFamily="Arial,sans-serif" fontWeight="bold" fontSize="5.5" fill="#fff" textAnchor="middle">S</text>
+      <rect x="10.5" y="10.5" width="7" height="7" rx="1" fill="#E8530E" />
+      <text x="14" y="15.7" fontFamily="Arial,sans-serif" fontWeight="bold" fontSize="5.5" fill="#fff" textAnchor="middle">P</text>
+      <rect x="19" y="10.5" width="7" height="7" rx="1" fill="#E8530E" />
+      <text x="22.5" y="15.7" fontFamily="Arial,sans-serif" fontWeight="bold" fontSize="5.5" fill="#fff" textAnchor="middle">Y</text>
+      {/* Row 3: X X X */}
+      <rect x="2" y="19" width="7" height="7" rx="1" fill="#E8E0D4" />
+      <text x="5.5" y="24.2" fontFamily="Arial,sans-serif" fontWeight="bold" fontSize="5.5" fill="#1A1A1A" fillOpacity="0.35" textAnchor="middle">X</text>
+      <rect x="10.5" y="19" width="7" height="7" rx="1" fill="#E8E0D4" />
+      <text x="14" y="24.2" fontFamily="Arial,sans-serif" fontWeight="bold" fontSize="5.5" fill="#1A1A1A" fillOpacity="0.35" textAnchor="middle">X</text>
+      <rect x="19" y="19" width="7" height="7" rx="1" fill="#E8E0D4" />
+      <text x="22.5" y="24.2" fontFamily="Arial,sans-serif" fontWeight="bold" fontSize="5.5" fill="#1A1A1A" fillOpacity="0.35" textAnchor="middle">X</text>
+    </svg>
+  );
+}
+
+export default function SpyllingBee() {
+  const [grid, setGrid] = useState<string[][] | null>(null);
+  const [words, setWords] = useState<PlacedWord[]>([]);
+  const [foundWords, setFoundWords] = useState<Set<string>>(new Set());
+  const [cellStates, setCellStates] = useState<CellState[][]>([]);
+  const [selectedLetters, setSelectedLetters] = useState<string[]>([]);
+  const [redactingCells, setRedactingCells] = useState<Map<string, number>>(new Map());
+  const [tapSequence, setTapSequence] = useState<CellCoord[]>([]);
+  const [flickering, setFlickering] = useState(false);
+  const [flareSet, setFlareSet] = useState<Set<string>>(new Set());
+  const [elapsed, setElapsed] = useState(0);
+  const [gameOver, setGameOver] = useState(false);
+  const [finalTime, setFinalTime] = useState(0);
+  const [revealActive, setRevealActive] = useState(false);
+  const [phase, setPhase] = useState<'start' | 'playing'>('start');
+  const [showHtp, setShowHtp] = useState(() => !localStorage.getItem(HTP_SEEN_KEY));
+  const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const wordsRef = useRef<PlacedWord[]>([]);
+  const foundWordsRef = useRef<Set<string>>(new Set());
+  const tapSequenceRef = useRef<CellCoord[]>([]);
+
+  const initGame = useCallback(() => {
+    const { grid: newGrid, words: newWords } = generateGrid();
+    setGrid(newGrid);
+    setWords(newWords);
+    wordsRef.current = newWords;
+    setCellStates(
+      Array.from({ length: ROWS }, () =>
+        Array.from({ length: COLS }, () => 'hidden' as CellState)
+      )
+    );
+    setFoundWords(new Set());
+    foundWordsRef.current = new Set();
+    setSelectedLetters([]);
+    setTapSequence([]);
+    tapSequenceRef.current = [];
+    setRedactingCells(new Map());
+    setFlickering(false);
+    setFlareSet(new Set());
+    setRevealActive(false);
+    setElapsed(0);
+    setGameOver(false);
+    setFinalTime(0);
+
+    // Clear any lingering timers
+    if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
+    if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
+    if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+
+    // Start timer
+    intervalRef.current = setInterval(() => {
+      setElapsed(prev => prev + 1);
+    }, 1000);
+  }, []);
+
+  // Favicon swap
+  useEffect(() => {
+    const link = document.querySelector("link[rel='icon']") as HTMLLinkElement | null;
+    const prev = link?.href;
+    if (link) link.href = '/spylling-bee-favicon.svg';
+    document.title = 'SpyXXing Bee';
+    return () => {
+      if (link && prev) link.href = prev;
+    };
+  }, []);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
+      if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
+      if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  // Keep foundWordsRef in sync + check win
+  useEffect(() => {
+    foundWordsRef.current = foundWords;
+    if (words.length > 0 && foundWords.size === words.length) {
+      // Win!
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      setFinalTime(elapsed);
+      // Small delay so the last flare animation plays
+      setTimeout(() => setGameOver(true), 600);
+    }
+  }, [foundWords, words.length, elapsed]);
+
+  const flickerAndClear = useCallback(() => {
+    setFlickering(true);
+    setTimeout(() => {
+      setFlickering(false);
+      tapSequenceRef.current = [];
+      setTapSequence([]);
+    }, 150);
+  }, []);
+
+  const checkWordMatch = useCallback((sequence: CellCoord[]): PlacedWord | null => {
+    for (const word of wordsRef.current) {
+      if (foundWordsRef.current.has(word.clean)) continue;
+      if (word.path.length !== sequence.length) continue;
+
+      const matches = word.path.every(
+        (p, i) => p.y === sequence[i].r && p.x === sequence[i].c
+      );
+      if (matches) return word;
+    }
+    return null;
+  }, []);
+
+  const isInStraightLine = useCallback((sequence: CellCoord[]): boolean => {
+    if (sequence.length <= 2) return true;
+    const dr = sequence[1].r - sequence[0].r;
+    const dc = sequence[1].c - sequence[0].c;
+    for (let i = 2; i < sequence.length; i++) {
+      if (
+        sequence[i].r - sequence[i - 1].r !== dr ||
+        sequence[i].c - sequence[i - 1].c !== dc
+      ) {
+        return false;
+      }
+    }
+    return true;
+  }, []);
+
+  const handleCellTap = useCallback((r: number, c: number) => {
+    if (tapTimerRef.current) {
+      clearTimeout(tapTimerRef.current);
+      tapTimerRef.current = null;
+    }
+
+    const prev = tapSequenceRef.current;
+    let newSeq: CellCoord[];
+
+    if (prev.length === 0) {
+      newSeq = [{ r, c }];
+    } else {
+      const last = prev[prev.length - 1];
+      const dr = r - last.r;
+      const dc = c - last.c;
+
+      const isAdj = Math.abs(dr) <= 1 && Math.abs(dc) <= 1 && (dr !== 0 || dc !== 0);
+
+      if (!isAdj) {
+        newSeq = [{ r, c }];
+      } else {
+        const candidate = [...prev, { r, c }];
+        if (!isInStraightLine(candidate)) {
+          newSeq = [{ r, c }];
+        } else {
+          newSeq = candidate;
+        }
+      }
+    }
+
+    const matched = checkWordMatch(newSeq);
+    if (matched) {
+      // Compute adjacent cells (all 8 neighbors of each word letter)
+      const adjacentKeys = new Set<string>();
+      for (const p of matched.path) {
+        for (let dr = -1; dr <= 1; dr++) {
+          for (let dc = -1; dc <= 1; dc++) {
+            if (dr === 0 && dc === 0) continue;
+            const nr = p.y + dr;
+            const nc = p.x + dc;
+            if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+              adjacentKeys.add(`${nr},${nc}`);
+            }
+          }
+        }
+      }
+      const foundKeys = new Set(matched.path.map(p => `${p.y},${p.x}`));
+
+      setCellStates(prevStates =>
+        prevStates.map((row, ri) =>
+          row.map((state, ci) => {
+            const key = `${ri},${ci}`;
+            if (foundKeys.has(key)) return 'found';
+            if (adjacentKeys.has(key) && state !== 'found') return 'adjacent';
+            return state;
+          })
+        )
+      );
+
+      const flareKeys = new Set(matched.path.map(p => `${p.y},${p.x}`));
+      setFlareSet(flareKeys);
+      setTimeout(() => setFlareSet(new Set()), 500);
+
+      setFoundWords(prev => new Set([...prev, matched.clean]));
+      console.log('Found word:', matched.clean);
+
+      tapSequenceRef.current = [];
+      setTapSequence([]);
+      return;
+    }
+
+    tapSequenceRef.current = newSeq;
+    setTapSequence(newSeq);
+
+    tapTimerRef.current = setTimeout(() => {
+      tapSequenceRef.current = [];
+      flickerAndClear();
+    }, TAP_TIMEOUT);
+  }, [checkWordMatch, isInStraightLine, flickerAndClear]);
+
+  const toggleLetter = useCallback((letter: string) => {
+    setSelectedLetters(prev => {
+      if (prev.includes(letter)) {
+        return prev.filter(l => l !== letter);
+      }
+      if (prev.length >= MAX_SELECTED) {
+        return prev;
+      }
+      return [...prev, letter];
+    });
+  }, []);
+
+  const fireReveal = useCallback(() => {
+    if (!grid || selectedLetters.length !== MAX_SELECTED) return;
+
+    const selectedSet = new Set(selectedLetters);
+    const revealSet = new Set<string>();
+
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (selectedSet.has(grid[r][c])) {
+          revealSet.add(`${r},${c}`);
+          if (r > 0) revealSet.add(`${r - 1},${c}`);
+          if (r < ROWS - 1) revealSet.add(`${r + 1},${c}`);
+          if (c > 0) revealSet.add(`${r},${c - 1}`);
+          if (c < COLS - 1) revealSet.add(`${r},${c + 1}`);
+        }
+      }
+    }
+
+    setCellStates(prev =>
+      prev.map((row, ri) =>
+        row.map((state, ci) => {
+          if (state === 'found' || state === 'adjacent') return state;
+          if (revealSet.has(`${ri},${ci}`)) return 'revealed';
+          return state;
+        })
+      )
+    );
+
+    setRedactingCells(new Map());
+    setRevealActive(true);
+    setSelectedLetters([]);
+
+    if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
+    if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
+
+    // After the reveal window, trigger redaction bar sweep
+    revealTimerRef.current = setTimeout(() => {
+      // Collect revealed cells and sort by position for cascade
+      const revealedCoords: { r: number; c: number; order: number }[] = [];
+      setCellStates(prev => {
+        prev.forEach((row, ri) =>
+          row.forEach((state, ci) => {
+            if (state === 'revealed') {
+              revealedCoords.push({ r: ri, c: ci, order: ri + ci });
+            }
+          })
+        );
+        return prev;
+      });
+
+      // Sort by row+col for top-left to bottom-right cascade
+      revealedCoords.sort((a, b) => a.order - b.order);
+
+      // Assign staggered delays
+      const delays = new Map<string, number>();
+      revealedCoords.forEach((coord, i) => {
+        delays.set(`${coord.r},${coord.c}`, i * REDACT_STAGGER_MS);
+      });
+      setRedactingCells(delays);
+
+      // After all bars complete, flip cells to hidden
+      const maxDelay = revealedCoords.length * REDACT_STAGGER_MS + REDACT_BAR_MS;
+      fadeTimerRef.current = setTimeout(() => {
+        setCellStates(prev =>
+          prev.map(row =>
+            row.map(state => (state === 'revealed' ? 'hidden' : state))
+          )
+        );
+        setRedactingCells(new Map());
+        setRevealActive(false);
+      }, maxDelay);
+    }, REVEAL_DURATION);
+  }, [grid, selectedLetters]);
+
+  const startGame = useCallback(() => {
+    initGame();
+    setPhase('playing');
+    if (!localStorage.getItem(HTP_SEEN_KEY)) {
+      localStorage.setItem(HTP_SEEN_KEY, '1');
+    }
+    setShowHtp(false);
+  }, [initGame]);
+
+  const closeHtp = useCallback(() => {
+    setShowHtp(false);
+    localStorage.setItem(HTP_SEEN_KEY, '1');
+  }, []);
+
+  // ── Start Screen ──
+  if (phase === 'start') {
+    return (
+      <div
+        className="min-h-screen flex flex-col items-center justify-center pb-12 relative"
+        style={{
+          background: '#FFFFFF',
+          fontFamily: "'Inter', sans-serif",
+          width: '100vw',
+          marginLeft: 'calc(-50vw + 50%)',
+          padding: '24px 16px',
+        }}
+      >
+        {/* Help button — top right */}
+        {!showHtp && (
+          <button
+            onClick={() => setShowHtp(true)}
+            className="cursor-pointer"
+            style={{
+              position: 'absolute',
+              top: 16,
+              right: 16,
+              width: 36,
+              height: 36,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontFamily: "'Inter', sans-serif",
+              fontWeight: 700,
+              fontSize: '1.1rem',
+              color: '#1A1A1A',
+              background: '#F5F0E8',
+              border: '1px solid #1A1A1A',
+              borderRadius: 3,
+              boxShadow: '2px 2px 0px #1A1A1A',
+              cursor: 'pointer',
+              transition: 'all 0.1s ease',
+            }}
+          >
+            ?
+          </button>
+        )}
+
+        {/* Icon */}
+        <div style={{ marginBottom: 20 }}>
+          <GameBoardIcon size={64} />
+        </div>
+
+        {/* Logo */}
+        <div className="flex flex-col items-center gap-3">
+          <div style={{ width: 140, height: 6, background: '#E8530E' }} />
+          <div
+            style={{
+              fontFamily: "'Archivo Black', sans-serif",
+              fontSize: 48,
+              color: '#1A1A1A',
+              letterSpacing: '-0.08em',
+              lineHeight: 1,
+              display: 'flex',
+            }}
+          >
+            <span>SPY</span>
+            <span style={{ color: '#E8530E' }}>XX</span>
+            <span>ING BEE</span>
+          </div>
+          <div style={{ width: 140, height: 6, background: '#E8530E' }} />
+        </div>
+
+        {/* Theme preview */}
+        <p
+          style={{
+            fontFamily: "'Inter', sans-serif",
+            fontSize: '0.85rem',
+            fontWeight: 500,
+            color: '#1A1A1A',
+            opacity: 0.5,
+            marginTop: 20,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+          }}
+        >
+          {THEME_NAME} — {DICTIONARY.length} words
+        </p>
+
+        {/* How to Play */}
+        {showHtp && (
+          <div
+            style={{
+              marginTop: 28,
+              maxWidth: 380,
+              padding: '0 8px',
+            }}
+          >
+            {/* Flavor text */}
+            <p
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontSize: '0.8rem',
+                fontWeight: 400,
+                color: '#1A1A1A',
+                opacity: 0.45,
+                lineHeight: 1.6,
+                textAlign: 'center',
+                margin: '0 0 16px',
+              }}
+            >
+              The enemy scrambled your secret word scrambler. Ironic!
+              <br />
+              Good thing a great spy never forgets their scrambling de-scrambler.
+            </p>
+
+            {/* Instructions */}
+            <ul
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontSize: '0.85rem',
+                fontWeight: 500,
+                color: '#1A1A1A',
+                lineHeight: 1.7,
+                paddingLeft: 20,
+                margin: 0,
+                listStyleType: 'disc',
+              }}
+            >
+              <li>Submit three letters at a time.</li>
+              <li>Reveal those letters and their neighbors temporarily.</li>
+              <li>Find all the hidden root words for the theme.</li>
+              <li>Get back home in time for a spot of tea.</li>
+            </ul>
+          </div>
+        )}
+
+        {/* Play button */}
+        <button
+          onClick={startGame}
+          className="cursor-pointer spylling-play-btn"
+          style={{
+            fontFamily: "'Archivo Black', sans-serif",
+            fontSize: '1.1rem',
+            letterSpacing: '0.06em',
+            marginTop: showHtp ? 32 : 28,
+            padding: '14px 48px',
+            background: '#1A1A1A',
+            color: '#FFFFFF',
+            border: '2px solid #1A1A1A',
+            borderRadius: 3,
+            boxShadow: '4px 4px 0px #1A1A1A',
+            cursor: 'pointer',
+            transition: 'all 0.1s ease',
+          }}
+        >
+          PLAY
+        </button>
+      </div>
+    );
+  }
+
+  if (!grid) return null;
+
+  // Results screen
+  if (gameOver) {
+    return (
+      <div
+        className="min-h-screen flex flex-col items-center justify-center pb-12 relative"
+        style={{
+          background: '#FFFFFF',
+          fontFamily: "'Inter', sans-serif",
+          width: '100vw',
+          marginLeft: 'calc(-50vw + 50%)',
+        }}
+      >
+        {/* Bass accent */}
+        <div style={{ width: 48, height: 5, background: '#E8530E', marginBottom: 20 }} />
+
+        <h1
+          style={{
+            fontFamily: "'Archivo Black', sans-serif",
+            fontSize: '2.2rem',
+            lineHeight: 1,
+            color: '#1A1A1A',
+            letterSpacing: '-0.02em',
+            margin: 0,
+          }}
+        >
+          DECODED
+        </h1>
+
+        <p
+          style={{
+            fontFamily: "'Inter', sans-serif",
+            fontSize: '0.85rem',
+            fontWeight: 500,
+            color: '#1A1A1A',
+            opacity: 0.5,
+            marginTop: 8,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+          }}
+        >
+          {THEME_NAME} — {words.length} words
+        </p>
+
+        {/* Final time */}
+        <div
+          style={{
+            fontFamily: "'VT323', monospace",
+            fontSize: '3.5rem',
+            color: '#E8530E',
+            marginTop: 24,
+            lineHeight: 1,
+          }}
+        >
+          {formatTime(finalTime)}
+        </div>
+
+        {/* Word list */}
+        <div
+          style={{
+            marginTop: 32,
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            gap: '8px 16px',
+            maxWidth: 400,
+          }}
+        >
+          {words.map(w => (
+            <span
+              key={w.clean}
+              style={{
+                fontFamily: "'VT323', monospace",
+                fontSize: '1.3rem',
+                color: '#1A1A1A',
+                fontWeight: 700,
+              }}
+            >
+              {w.clean}
+            </span>
+          ))}
+        </div>
+
+        {/* Play Again */}
+        <button
+          onClick={initGame}
+          className="cursor-pointer"
+          style={{
+            fontFamily: "'Inter', sans-serif",
+            fontWeight: 600,
+            fontSize: '0.85rem',
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            marginTop: 40,
+            padding: '12px 36px',
+            background: '#1A1A1A',
+            color: '#FFFFFF',
+            border: '2px solid #1A1A1A',
+            borderRadius: 0,
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          PLAY AGAIN
+        </button>
+      </div>
+    );
+  }
+
+  const canSubmit = selectedLetters.length === MAX_SELECTED;
+  const tapSet = new Set(tapSequence.map(t => `${t.r},${t.c}`));
+
+  return (
+    <div
+      className="min-h-screen flex flex-col items-center pt-10 pb-12 relative"
+      style={{
+        background: '#FFFFFF',
+        fontFamily: "'Inter', sans-serif",
+        width: '100vw',
+        marginLeft: 'calc(-50vw + 50%)',
+      }}
+    >
+      {/* Help button — top right */}
+      <button
+        onClick={() => setShowHtp(true)}
+        className="cursor-pointer"
+        style={{
+          position: 'absolute',
+          top: 16,
+          right: 16,
+          width: 36,
+          height: 36,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontFamily: "'Inter', sans-serif",
+          fontWeight: 700,
+          fontSize: '1.1rem',
+          color: '#1A1A1A',
+          background: '#F5F0E8',
+          border: '1px solid #1A1A1A',
+          borderRadius: 3,
+          boxShadow: '2px 2px 0px #1A1A1A',
+          cursor: 'pointer',
+          transition: 'all 0.1s ease',
+        }}
+      >
+        ?
+      </button>
+
+      {/* How to Play modal */}
+      {showHtp && (
+        <div
+          onClick={(e) => { if (e.target === e.currentTarget) closeHtp(); }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 200,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              background: '#FFFFFF',
+              border: '2px solid #1A1A1A',
+              borderRadius: 3,
+              boxShadow: '6px 6px 0px #1A1A1A',
+              padding: '28px 24px',
+              maxWidth: 380,
+              width: '100%',
+              position: 'relative',
+            }}
+          >
+            <button
+              onClick={closeHtp}
+              className="cursor-pointer"
+              style={{
+                position: 'absolute',
+                top: 10,
+                right: 12,
+                background: 'none',
+                border: 'none',
+                fontSize: '1.4rem',
+                color: '#1A1A1A',
+                opacity: 0.4,
+                cursor: 'pointer',
+                lineHeight: 1,
+              }}
+            >
+              &times;
+            </button>
+            <p
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontSize: '0.8rem',
+                fontWeight: 400,
+                color: '#1A1A1A',
+                opacity: 0.45,
+                lineHeight: 1.6,
+                textAlign: 'center',
+                margin: '0 0 16px',
+              }}
+            >
+              The enemy scrambled your secret word scrambler. Ironic!
+              <br />
+              Good thing a great spy never forgets their scrambling de-scrambler.
+            </p>
+            <ul
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontSize: '0.85rem',
+                fontWeight: 500,
+                color: '#1A1A1A',
+                lineHeight: 1.7,
+                paddingLeft: 20,
+                margin: '0 0 20px',
+                listStyleType: 'disc',
+              }}
+            >
+              <li>Submit three letters at a time.</li>
+              <li>Reveal those letters and their neighbors temporarily.</li>
+              <li>Find all the hidden root words for the theme.</li>
+              <li>Get back home in time for a spot of tea.</li>
+            </ul>
+            <div style={{ textAlign: 'center' }}>
+              <button
+                onClick={closeHtp}
+                className="cursor-pointer"
+                style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  padding: '10px 32px',
+                  background: '#1A1A1A',
+                  color: '#FFFFFF',
+                  border: '2px solid #1A1A1A',
+                  borderRadius: 3,
+                  boxShadow: '3px 3px 0px #1A1A1A',
+                  cursor: 'pointer',
+                  transition: 'all 0.1s ease',
+                }}
+              >
+                GOT IT
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Logo */}
+      <div className="flex flex-col items-center gap-3 mb-2">
+        <div style={{ width: 140, height: 6, background: '#E8530E' }} />
+        <div
+          style={{
+            fontFamily: "'Archivo Black', sans-serif",
+            fontSize: 48,
+            color: '#1A1A1A',
+            letterSpacing: '-0.08em',
+            lineHeight: 1,
+            display: 'flex',
+          }}
+        >
+          <span>SPY</span>
+          <span style={{ color: '#E8530E' }}>XX</span>
+          <span>ING BEE</span>
+        </div>
+        <div style={{ width: 140, height: 6, background: '#E8530E' }} />
+      </div>
+
+      {/* Theme + word count */}
+      <p
+        style={{
+          fontFamily: "'Inter', sans-serif",
+          fontSize: '0.85rem',
+          fontWeight: 500,
+          color: '#1A1A1A',
+          opacity: 0.5,
+          marginTop: 6,
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+        }}
+      >
+        {THEME_NAME} — {words.length} words
+      </p>
+
+      {/* Progress */}
+      <p
+        style={{
+          fontFamily: "'Inter', sans-serif",
+          fontSize: '0.95rem',
+          fontWeight: 600,
+          color: foundWords.size > 0 ? '#E8530E' : '#1A1A1A',
+          opacity: foundWords.size > 0 ? 1 : 0.35,
+          marginTop: 4,
+        }}
+      >
+        {foundWords.size} / {words.length} found
+      </p>
+
+      {/* Timer */}
+      <div
+        style={{
+          fontFamily: "'VT323', monospace",
+          fontSize: '1.8rem',
+          color: '#1A1A1A',
+          opacity: 0.7,
+          marginTop: 6,
+          marginBottom: 12,
+          lineHeight: 1,
+        }}
+      >
+        {formatTime(elapsed)}
+      </div>
+
+      {/* Grid panel */}
+      <div
+        className="spylling-grid-panel"
+        style={{
+          background: '#F5F0E8',
+          padding: 'clamp(6px, 2vw, 16px)',
+          border: '2px solid #1A1A1A',
+          borderRadius: 3,
+          boxShadow: '5px 5px 0px #1A1A1A, inset 1px 1px 0px #E8E0D4',
+          width: 'min(calc(100vw - 24px), 500px)',
+          boxSizing: 'border-box',
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          className="grid"
+          style={{
+            gridTemplateColumns: `repeat(${COLS}, 1fr)`,
+            gap: 3,
+          }}
+        >
+          {grid.map((row, ri) =>
+            row.map((letter, ci) => {
+              const state = cellStates[ri]?.[ci] ?? 'hidden';
+              const isFound = state === 'found';
+              const isAdjacent = state === 'adjacent';
+              const isRevealed = state === 'revealed';
+              const isVisible = isRevealed || isFound || isAdjacent;
+              const isTapped = tapSet.has(`${ri},${ci}`);
+              const isFlaring = flareSet.has(`${ri},${ci}`);
+              const cellKey = `${ri},${ci}`;
+              const redactDelay = redactingCells.get(cellKey);
+              const isRedacting = redactDelay !== undefined;
+              const tapIndex = isTapped
+                ? tapSequence.findIndex(t => t.r === ri && t.c === ci)
+                : -1;
+
+              // Visual hierarchy:
+              // 1. Orange-red = temporary reveal (look here NOW)
+              // 2. Black bold = found word (decoded, confirmed)
+              // 3. Dark gray = adjacent to found word (bonus intel)
+              // 4. Faint X = hidden (quiet background)
+              let cellColor: string;
+              let cellOpacity = 1;
+              let fontWeight: number | string = 400;
+
+              if (isFlaring) {
+                cellColor = '#E8530E';
+                fontWeight = 700;
+              } else if (isFound) {
+                cellColor = '#1A1A1A';
+                fontWeight = 700;
+              } else if (isAdjacent) {
+                cellColor = '#1A1A1A';
+                cellOpacity = 0.6;
+                fontWeight = 400;
+              } else if (isRevealed) {
+                cellColor = '#E8530E';
+                fontWeight = 700;
+              } else {
+                // Hidden X — dim further during active reveal
+                cellColor = '#1A1A1A';
+                cellOpacity = revealActive ? 0.2 : 0.35;
+              }
+
+              return (
+                <div
+                  key={`${ri}-${ci}`}
+                  onClick={() => handleCellTap(ri, ci)}
+                  className="relative select-none"
+                  style={{
+                    fontFamily: "'VT323', monospace",
+                    aspectRatio: '1',
+                    minWidth: 0,
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 'clamp(18px, 4.5vw, 26px)',
+                    color: cellColor,
+                    fontWeight,
+                    opacity: flickering && isTapped ? 0 : cellOpacity,
+                    transition: isFlaring
+                      ? 'color 0.5s ease'
+                      : flickering && isTapped
+                        ? 'opacity 0.15s ease-out'
+                        : 'opacity 0.3s ease',
+                    cursor: 'pointer',
+                    background: isTapped && !flickering
+                      ? 'rgba(232, 83, 14, 0.1)'
+                      : 'transparent',
+                    animation: isFlaring
+                      ? 'flare-bass 0.5s ease-out forwards'
+                      : 'none',
+                  }}
+                >
+                  {isVisible ? letter : 'X'}
+                  {/* Redaction bar overlay */}
+                  {isRedacting && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        height: '100%',
+                        background: '#E8530E',
+                        animation: `redact-sweep ${REDACT_BAR_MS}ms ${redactDelay}ms linear forwards`,
+                        width: 0,
+                      }}
+                    />
+                  )}
+                  {isTapped && !flickering && (
+                    <span
+                      className="absolute"
+                      style={{
+                        top: 0,
+                        right: 1,
+                        fontFamily: "'Inter', sans-serif",
+                        fontSize: '9px',
+                        fontWeight: 600,
+                        color: '#E8530E',
+                        lineHeight: 1,
+                      }}
+                    >
+                      {tapIndex + 1}
+                    </span>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* Alphabet bar */}
+      <div
+        className="mt-8 flex flex-wrap justify-center max-w-[420px] px-2"
+        style={{ gap: 6 }}
+      >
+        {ALPHABET.map(letter => {
+          const isSelected = selectedLetters.includes(letter);
+          return (
+            <button
+              key={letter}
+              onClick={() => toggleLetter(letter)}
+              className="cursor-pointer spylling-key"
+              data-selected={isSelected || undefined}
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                width: 36,
+                height: 36,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: isSelected ? '#E8530E' : '#F5F0E8',
+                color: isSelected ? '#FFFFFF' : '#1A1A1A',
+                opacity: isSelected ? 1 : 0.65,
+                border: '1px solid #1A1A1A',
+                borderRadius: 3,
+                boxShadow: isSelected ? 'none' : '2px 2px 0px #1A1A1A',
+                transform: isSelected ? 'translate(2px, 2px)' : 'none',
+                transition: 'all 0.1s ease',
+                padding: 0,
+              }}
+            >
+              {letter}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Submit button */}
+      <button
+        onClick={fireReveal}
+        disabled={!canSubmit}
+        className="cursor-pointer"
+        style={{
+          fontFamily: "'Inter', sans-serif",
+          fontWeight: 600,
+          fontSize: '0.85rem',
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
+          marginTop: 20,
+          padding: '10px 32px',
+          background: canSubmit ? '#1A1A1A' : 'transparent',
+          color: canSubmit ? '#FFFFFF' : '#1A1A1A',
+          opacity: canSubmit ? 1 : 0.2,
+          border: '2px solid #1A1A1A',
+          borderRadius: 0,
+          cursor: canSubmit ? 'pointer' : 'default',
+          transition: 'all 0.15s ease',
+        }}
+      >
+        REVEAL
+      </button>
+
+      {/* Reset */}
+      <button
+        onClick={initGame}
+        className="cursor-pointer"
+        style={{
+          fontFamily: "'Inter', sans-serif",
+          fontWeight: 500,
+          fontSize: '0.75rem',
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+          marginTop: 16,
+          padding: '6px 16px',
+          background: 'transparent',
+          color: '#1A1A1A',
+          opacity: 0.35,
+          border: 'none',
+          cursor: 'pointer',
+          transition: 'opacity 0.15s ease',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.opacity = '0.7')}
+        onMouseLeave={e => (e.currentTarget.style.opacity = '0.35')}
+      >
+        RESET
+      </button>
+    </div>
+  );
+}

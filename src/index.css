@@ -72,3 +72,71 @@ body {
   margin: 0 auto;
   padding: 0 1rem;
 }
+
+/* ── Keylocker ──────────────────────────────────────────────────────────────── */
+
+@keyframes kb-cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+.kb-toggle-btn {
+  display: none;
+}
+@media (hover: none) and (pointer: coarse) {
+  .kb-toggle-btn {
+    display: flex;
+  }
+}
+
+@keyframes listen-pulse {
+  0%, 100% {
+    box-shadow: 0 0 6px rgba(192,132,252,0.3), 0 0 14px rgba(192,132,252,0.1);
+    border-color: rgba(192,132,252,0.6);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(192,132,252,0.6), 0 0 30px rgba(192,132,252,0.25);
+    border-color: rgba(192,132,252,1);
+  }
+}
+
+/* Hide scrollbar on wheel picker columns */
+.wheel-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Keylocker dark theme scoping */
+.keylocker-theme {
+  --font-sans: 'Space Mono', monospace;
+  --font-display: 'Space Mono', monospace;
+  background: #0a0a0f;
+  color: #e0e0e8;
+}
+
+/* ── Spylling Bee ───────────────────────────────────────────────────────────── */
+
+@keyframes redact-sweep {
+  0% { width: 0; }
+  100% { width: 100%; }
+}
+
+@keyframes flare-bass {
+  0% { color: #E8530E; }
+  40% { color: #E8530E; }
+  100% { color: #1A1A1A; }
+}
+
+.spylling-key:not([data-selected]):hover {
+  box-shadow: 1px 1px 0px #1A1A1A !important;
+  transform: translate(1px, 1px) !important;
+  opacity: 1 !important;
+}
+
+.spylling-play-btn:hover {
+  box-shadow: 2px 2px 0px #1A1A1A !important;
+  transform: translate(2px, 2px) !important;
+}
+.spylling-play-btn:active {
+  box-shadow: none !important;
+  transform: translate(4px, 4px) !important;
+}

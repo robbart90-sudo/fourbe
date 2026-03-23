@@ -6,6 +6,8 @@ import Play from './pages/Play';
 import { ComingSoon } from './components/ComingSoon';
 
 const Editor = lazy(() => import('./pages/Editor'));
+const Keylocker = lazy(() => import('./pages/Keylocker'));
+const SpyllingBee = lazy(() => import('./pages/SpyllingBee'));
 
 const PLAYTEST_KEY = 'fourbe-playtest';
 const PLAYTEST_CODE = 'fourbe2026';
@@ -35,26 +37,51 @@ function Nav() {
   );
 }
 
+function FourbeApp() {
+  if (!hasAccess) return <ComingSoon />;
+  return (
+    <>
+      <Nav />
+      <Routes>
+        <Route path="/" element={<Play />} />
+        <Route path="/play" element={<Play />} />
+        <Route
+          path="/editor"
+          element={
+            <Suspense fallback={null}>
+              <Editor />
+            </Suspense>
+          }
+        />
+      </Routes>
+    </>
+  );
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {hasAccess ? (
-      <BrowserRouter>
-        <Nav />
-        <Routes>
-          <Route path="/" element={<Play />} />
-          <Route path="/play" element={<Play />} />
-          <Route
-            path="/editor"
-            element={
-              <Suspense fallback={null}>
-                <Editor />
-              </Suspense>
-            }
-          />
-        </Routes>
-      </BrowserRouter>
-    ) : (
-      <ComingSoon />
-    )}
+    <BrowserRouter>
+      <Routes>
+        <Route
+          path="/keylocker"
+          element={
+            <Suspense fallback={null}>
+              <div className="keylocker-theme" style={{ minHeight: '100dvh', width: '100vw', marginLeft: 'calc(-50vw + 50%)' }}>
+                <Keylocker />
+              </div>
+            </Suspense>
+          }
+        />
+        <Route
+          path="/spylling-bee"
+          element={
+            <Suspense fallback={null}>
+              <SpyllingBee />
+            </Suspense>
+          }
+        />
+        <Route path="/*" element={<FourbeApp />} />
+      </Routes>
+    </BrowserRouter>
   </StrictMode>,
 );
