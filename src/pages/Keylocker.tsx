@@ -39,29 +39,33 @@ const KB_ROWS = [
   ['ENTER','Z','X','C','V','B','N','M','⌫'],
 ];
 
-// ── Dark Cyberpunk Palette ───────────────────────────────────────────────────
+// ── Neon Palette ─────────────────────────────────────────────────────────────
 const CYB = {
-  bg: '#0a0a0f',
-  wheelBg: '#12121e',
-  wheelBorder: '#2a2a3a',
-  wheelBorderFocused: '#4a4a6a',
-  text: '#e0e0e8',
-  textDim: '#6a6a7a',
-  textMuted: '#484858',
-  higher: '#f59e0b',    // amber
-  lower: '#06b6d4',     // cyan
-  correct: '#00e676',   // neon green
-  correctDim: '#00c060',
-  listen: '#c084fc',    // purple for listened position
-  silent: '#3a3a4a',    // dim gray for silent/no-info
+  bg: '#08080F',
+  wheelBg: '#0c0c18',
+  wheelBorder: '#1a1a30',
+  wheelBorderFocused: '#00F0FF44',
+  text: 'rgba(255,255,255,0.7)',
+  textBright: '#FFFFFF',
+  textDim: 'rgba(0,240,255,0.5)',
+  textMuted: 'rgba(255,255,255,0.25)',
+  higher: '#FF00AA',    // magenta
+  lower: '#00F0FF',     // cyan
+  correct: '#00FF66',   // neon green
+  correctDim: '#00cc52',
+  listen: '#FF00AA',    // magenta for listened position
+  silent: '#1a1a30',    // dim for silent/no-info
+  neonCyan: '#00F0FF',
+  neonMagenta: '#FF00AA',
   // Glow shadows
-  glowHigher: '0 0 8px rgba(245,158,11,0.5), 0 0 20px rgba(245,158,11,0.2)',
-  glowLower: '0 0 8px rgba(6,182,212,0.5), 0 0 20px rgba(6,182,212,0.2)',
-  glowCorrect: '0 0 8px rgba(0,230,118,0.5), 0 0 20px rgba(0,230,118,0.2)',
+  glowHigher: '0 0 8px rgba(255,0,170,0.5), 0 0 20px rgba(255,0,170,0.2)',
+  glowLower: '0 0 8px rgba(0,240,255,0.5), 0 0 20px rgba(0,240,255,0.2)',
+  glowCorrect: '0 0 8px rgba(0,255,102,0.5), 0 0 20px rgba(0,255,102,0.2)',
   // Text shadows for neon bleed
-  textGlowHigher: '0 0 6px rgba(245,158,11,0.6), 0 0 14px rgba(245,158,11,0.25)',
-  textGlowLower: '0 0 6px rgba(6,182,212,0.6), 0 0 14px rgba(6,182,212,0.25)',
-  textGlowCorrect: '0 0 6px rgba(0,230,118,0.6), 0 0 14px rgba(0,230,118,0.25)',
+  textGlowHigher: '0 0 6px rgba(255,0,170,0.6), 0 0 14px rgba(255,0,170,0.25)',
+  textGlowLower: '0 0 6px rgba(0,240,255,0.6), 0 0 14px rgba(0,240,255,0.25)',
+  textGlowCorrect: '0 0 6px rgba(0,255,102,0.6), 0 0 14px rgba(0,255,102,0.25)',
+  glowTitle: '0 0 10px rgba(0,240,255,0.5), 0 0 20px rgba(0,240,255,0.3)',
 };
 
 // ── Seeded random starting positions ─────────────────────────────────────────
@@ -98,9 +102,10 @@ interface CustomKeyboardProps {
   focusedWheel: number;
   onLeft: () => void;
   onRight: () => void;
+  enterActive?: boolean;
 }
 
-function CustomKeyboard({ onLetterPress, onBackspace, onEnter, ranges, focusedWheel, onLeft, onRight }: CustomKeyboardProps) {
+function CustomKeyboard({ onLetterPress, onBackspace, onEnter, ranges, focusedWheel, onLeft, onRight, enterActive }: CustomKeyboardProps) {
   const handleKey = (key: string) => {
     if (key === 'ENTER') onEnter();
     else if (key === '⌫') onBackspace();
@@ -113,15 +118,9 @@ function CustomKeyboard({ onLetterPress, onBackspace, onEnter, ranges, focusedWh
     return letter >= range.lower && letter <= range.upper;
   };
 
-  const arrowBtnStyle: React.CSSProperties = {
-    height: 32,
-    width: 48,
-    background: '#16162a',
-    color: CYB.text,
-    border: `1px solid ${CYB.wheelBorder}`,
+  const neonKeyBase: React.CSSProperties = {
+    background: '#0D0D15',
     borderRadius: 6,
-    fontSize: 18,
-    fontWeight: 500,
     fontFamily: 'var(--font-sans)',
     cursor: 'pointer',
     display: 'flex',
@@ -134,31 +133,49 @@ function CustomKeyboard({ onLetterPress, onBackspace, onEnter, ranges, focusedWh
     WebkitUserSelect: 'none',
   };
 
+  const arrowBtnStyle: React.CSSProperties = {
+    ...neonKeyBase,
+    height: 32,
+    width: 48,
+    color: CYB.neonCyan,
+    border: `1.5px solid ${CYB.neonCyan}`,
+    boxShadow: '0 0 6px rgba(0,240,255,0.15)',
+    fontSize: 18,
+    fontWeight: 500,
+    textShadow: '0 0 4px rgba(0,240,255,0.3)',
+  };
+
   return (
     <div style={{
       position: 'fixed',
       bottom: 0,
       left: 0,
       right: 0,
-      background: '#0e0e18',
-      borderTop: `1px solid ${CYB.wheelBorder}`,
+      background: 'transparent',
+      borderTop: '1px solid rgba(0,240,255,0.08)',
       padding: '8px 4px',
       paddingBottom: 'calc(8px + env(safe-area-inset-bottom, 0px))',
       zIndex: 100,
       display: 'flex',
       flexDirection: 'column',
       gap: 5,
+      // dark scrim behind floating keys
+      backdropFilter: 'blur(8px)',
+      WebkitBackdropFilter: 'blur(8px)',
+      backgroundImage: 'linear-gradient(to top, rgba(8,8,15,0.95), rgba(8,8,15,0.85))',
     }}>
       {/* Arrow row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 4px' }}>
         <button
           onPointerDown={(e) => { e.preventDefault(); onLeft(); }}
-          style={{ ...arrowBtnStyle, opacity: focusedWheel === 0 ? 0.35 : 1 }}
+          className="kl-kb-key"
+          style={{ ...arrowBtnStyle, opacity: focusedWheel === 0 ? 0.25 : 1 }}
           aria-label="Move focus left"
         >←</button>
         <button
           onPointerDown={(e) => { e.preventDefault(); onRight(); }}
-          style={{ ...arrowBtnStyle, opacity: focusedWheel === 4 ? 0.35 : 1 }}
+          className="kl-kb-key"
+          style={{ ...arrowBtnStyle, opacity: focusedWheel === 4 ? 0.25 : 1 }}
           aria-label="Move focus right"
         >→</button>
       </div>
@@ -167,40 +184,68 @@ function CustomKeyboard({ onLetterPress, onBackspace, onEnter, ranges, focusedWh
           display: 'flex',
           justifyContent: 'center',
           gap: 4,
-          // Row 2 (ASDFGHJKL) is shorter — add padding to center it
           ...(ri === 1 ? { paddingLeft: 16, paddingRight: 16 } : {}),
         }}>
           {row.map(key => {
-            const isSpecial = key === 'ENTER' || key === '⌫';
+            const isEnter = key === 'ENTER';
+            const isBackspace = key === '⌫';
+            const isSpecial = isEnter || isBackspace;
             const dimmed = !isSpecial && !isLetterInRange(key);
+
+            // Per-key color logic
+            let borderColor: string;
+            let glowShadow: string;
+            let textColor: string;
+            let textShadowVal: string;
+
+            if (isEnter) {
+              if (enterActive) {
+                borderColor = CYB.correct;
+                glowShadow = `0 0 8px rgba(0,255,102,0.3), 0 0 16px rgba(0,255,102,0.1)`;
+                textColor = CYB.correct;
+                textShadowVal = `0 0 6px ${CYB.correct}`;
+              } else {
+                borderColor = 'rgba(0,255,102,0.15)';
+                glowShadow = 'none';
+                textColor = 'rgba(255,255,255,0.25)';
+                textShadowVal = 'none';
+              }
+            } else if (isBackspace) {
+              borderColor = 'rgba(255,0,170,0.4)';
+              glowShadow = '0 0 4px rgba(255,0,170,0.1)';
+              textColor = 'rgba(255,255,255,0.6)';
+              textShadowVal = 'none';
+            } else if (dimmed) {
+              borderColor = 'rgba(0,240,255,0.08)';
+              glowShadow = 'none';
+              textColor = 'rgba(255,255,255,0.2)';
+              textShadowVal = 'none';
+            } else {
+              borderColor = 'rgba(0,240,255,0.4)';
+              glowShadow = '0 0 6px rgba(0,240,255,0.15)';
+              textColor = 'rgba(255,255,255,0.7)';
+              textShadowVal = '0 0 4px rgba(0,240,255,0.15)';
+            }
+
             return (
               <button
                 key={key}
+                className="kl-kb-key"
                 onPointerDown={(e) => {
                   e.preventDefault();
                   handleKey(key);
                 }}
                 style={{
+                  ...neonKeyBase,
                   flex: isSpecial ? 1.4 : 1,
                   height: 42,
-                  background: isSpecial ? '#1a1a2e' : '#16162a',
-                  color: key === 'ENTER' ? CYB.correct : CYB.text,
-                  border: `1px solid ${isSpecial ? '#3a3a5a' : CYB.wheelBorder}`,
-                  borderRadius: 6,
+                  color: textColor,
+                  border: `1.5px solid ${borderColor}`,
                   fontSize: isSpecial ? 11 : 16,
                   fontWeight: isSpecial ? 700 : 500,
-                  fontFamily: 'var(--font-sans)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: 0,
-                  WebkitTapHighlightColor: 'transparent',
-                  touchAction: 'manipulation',
-                  userSelect: 'none',
-                  WebkitUserSelect: 'none',
-                  textShadow: key === 'ENTER' ? CYB.textGlowCorrect : 'none',
-                  opacity: dimmed ? 0.35 : 1,
+                  boxShadow: glowShadow,
+                  textShadow: textShadowVal,
+                  transition: 'all 0.08s ease',
                 }}
               >
                 {key}
@@ -409,17 +454,15 @@ function LockWheel({ selectedIndex, onIndexChange, focused, onFocus, range, disa
 
   // Border and shadow — listening wheels use CSS animation class instead of static styles
   const staticBorderColor = range.solved && !isOffSolved ? CYB.correct
-    : isOffSolved ? 'rgba(0,230,118,0.35)'
-    : kbFocused ? '#00e5ff'
-    : focused ? CYB.wheelBorderFocused
-    : CYB.wheelBorder;
+    : isOffSolved ? 'rgba(0,255,102,0.35)'
+    : kbFocused ? CYB.neonCyan
+    : focused ? CYB.neonCyan
+    : 'rgba(0,240,255,0.3)';
   const staticBoxShadow = range.solved && !isOffSolved
-    ? `inset 0 0 12px rgba(0,230,118,0.08), ${CYB.glowCorrect}`
-    : kbFocused
-      ? '0 0 8px rgba(0,229,255,0.5), 0 0 20px rgba(0,229,255,0.2)'
-      : focused
-        ? 'inset 0 1px 4px rgba(0,0,0,0.4)'
-        : 'inset 0 1px 4px rgba(0,0,0,0.3)';
+    ? `0 0 10px rgba(0,255,102,0.3), inset 0 0 10px rgba(0,255,102,0.1), 4px 4px 0px rgba(0,255,102,0.15)`
+    : kbFocused || focused
+      ? `0 0 10px rgba(0,240,255,0.4), inset 0 0 10px rgba(0,240,255,0.1), 4px 4px 0px rgba(0,240,255,0.2)`
+      : `0 0 10px rgba(0,240,255,0.15), inset 0 0 8px rgba(0,240,255,0.05), 4px 4px 0px rgba(0,240,255,0.1)`;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -430,9 +473,9 @@ function LockWheel({ selectedIndex, onIndexChange, focused, onFocus, range, disa
           width: WHEEL_W,
           height: VIEWPORT_H,
           borderRadius: 12,
-          border: `2px solid ${listening ? CYB.listen : staticBorderColor}`,
+          border: `2px solid ${listening ? CYB.neonCyan : staticBorderColor}`,
           overflow: 'hidden',
-          background: CYB.wheelBg,
+          background: `linear-gradient(to bottom, #08080F 0%, #0D0D18 35%, #111120 50%, #0D0D18 65%, #08080F 100%)`,
           boxShadow: listening ? undefined : staticBoxShadow,
           transition: listening ? 'none' : 'border-color 0.15s, box-shadow 0.15s',
           cursor: disabled ? 'default' : 'grab',
@@ -469,13 +512,13 @@ function LockWheel({ selectedIndex, onIndexChange, focused, onFocus, range, disa
 
               let fontSize: number, fontWeight: number, baseOpacity: number;
               if (dist === 0) { fontSize = 24; fontWeight = 700; baseOpacity = 1; }
-              else if (dist === 1) { fontSize = 17; fontWeight = 500; baseOpacity = 0.55; }
-              else if (dist === 2) { fontSize = 12; fontWeight = 400; baseOpacity = 0.45; }
-              else { fontSize = 10; fontWeight = 400; baseOpacity = 0.10; }
+              else if (dist === 1) { fontSize = 17; fontWeight = 500; baseOpacity = 0.5; }
+              else if (dist === 2) { fontSize = 12; fontWeight = 400; baseOpacity = 0.3; }
+              else { fontSize = 10; fontWeight = 400; baseOpacity = 0.08; }
 
               const opacity = isSolvedLetter
-                ? Math.max(baseOpacity, 0.7)
-                : (!inRange ? Math.min(baseOpacity, 0.12) : baseOpacity);
+                ? Math.max(baseOpacity, 0.8)
+                : (!inRange ? Math.min(baseOpacity, 0.15) : (dist === 0 ? 1 : baseOpacity * 1.2));
 
               return (
                 <div key={i} style={{
@@ -488,10 +531,10 @@ function LockWheel({ selectedIndex, onIndexChange, focused, onFocus, range, disa
                   fontWeight,
                   fontFamily: 'var(--font-sans)',
                   opacity,
-                  color: isSolvedLetter ? '#fff' : CYB.text,
+                  color: isSolvedLetter ? '#fff' : (dist === 0 ? '#FFFFFF' : 'rgba(255,255,255,0.85)'),
                   background: isSolvedLetter ? CYB.correctDim : 'transparent',
                   borderRadius: isSolvedLetter ? 4 : 0,
-                  textShadow: isSolvedLetter ? CYB.textGlowCorrect : 'none',
+                  textShadow: isSolvedLetter ? CYB.textGlowCorrect : (dist === 0 ? '0 0 6px rgba(255,255,255,0.15)' : 'none'),
                   transition: 'font-size 0.12s, opacity 0.12s',
                   lineHeight: 1,
                 }}>
@@ -509,25 +552,27 @@ function LockWheel({ selectedIndex, onIndexChange, focused, onFocus, range, disa
           left: 2,
           right: 2,
           height: SLOT_H,
-          background: listening ? 'rgba(192,132,252,0.08)'
-            : range.solved ? 'rgba(0,230,118,0.08)' : 'rgba(255,255,255,0.04)',
-          borderRadius: 6,
+          background: listening ? 'rgba(0,240,255,0.06)'
+            : range.solved ? 'rgba(0,255,102,0.06)' : 'rgba(255,255,255,0.03)',
+          borderTop: '1px solid rgba(255,255,255,0.06)',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          borderRadius: 4,
           pointerEvents: 'none',
         }} />
 
-        {/* Top/bottom fade */}
+        {/* Top/bottom fade — matches cylinder gradient ends */}
         <div style={{
           position: 'absolute',
           top: 0, left: 0, right: 0,
           height: SLOT_H * 1.5,
-          background: 'linear-gradient(to bottom, rgba(18,18,30,0.9), transparent)',
+          background: 'linear-gradient(to bottom, #08080F 20%, transparent)',
           pointerEvents: 'none',
         }} />
         <div style={{
           position: 'absolute',
           bottom: 0, left: 0, right: 0,
           height: SLOT_H * 1.5,
-          background: 'linear-gradient(to top, rgba(18,18,30,0.9), transparent)',
+          background: 'linear-gradient(to top, #08080F 20%, transparent)',
           pointerEvents: 'none',
         }} />
       </div>
@@ -538,7 +583,8 @@ function LockWheel({ selectedIndex, onIndexChange, focused, onFocus, range, disa
           marginTop: 2,
           fontSize: 9,
           fontWeight: 600,
-          color: 'rgba(0,230,118,0.5)',
+          color: 'rgba(0,255,102,0.5)',
+          textShadow: '0 0 4px rgba(0,255,102,0.3)',
           fontFamily: 'var(--font-sans)',
           lineHeight: 1,
         }}>
@@ -561,9 +607,9 @@ function TrailCell({ letter, feedback, isListened }: { letter: string; feedback:
     : feedback === 'higher' ? CYB.glowHigher
     : feedback === 'lower' ? CYB.glowLower
     : 'none';
-  const textGlow = feedback === 'correct' ? CYB.textGlowCorrect
-    : feedback === 'higher' ? CYB.textGlowHigher
-    : feedback === 'lower' ? CYB.textGlowLower
+  const textGlow = feedback === 'correct' ? `0 0 8px ${CYB.correct}, 0 0 16px ${CYB.correct}`
+    : feedback === 'higher' ? `0 0 8px ${CYB.higher}, 0 0 16px ${CYB.higher}`
+    : feedback === 'lower' ? `0 0 8px ${CYB.lower}, 0 0 16px ${CYB.lower}`
     : 'none';
   const icon = feedback === 'correct' ? '✓'
     : feedback === 'higher' ? '↑'
@@ -574,7 +620,7 @@ function TrailCell({ letter, feedback, isListened }: { letter: string; feedback:
     <div style={{
       width: WHEEL_W,
       height: TRAIL_ROW_H,
-      background: '#141422',
+      background: '#0c0c18',
       border: `1px solid ${isSilent ? CYB.silent : color}`,
       borderRadius: 6,
       boxShadow: glow,
@@ -591,7 +637,7 @@ function TrailCell({ letter, feedback, isListened }: { letter: string; feedback:
         fontSize: 16,
         fontWeight: 700,
         lineHeight: 1,
-        color: isSilent ? CYB.textMuted : '#d0d0d8',
+        color: isSilent ? CYB.textMuted : CYB.text,
       }}>{letter}</span>
       <span style={{
         fontSize: 10,
@@ -609,8 +655,8 @@ function TrailCell({ letter, feedback, isListened }: { letter: string; feedback:
           width: 4,
           height: 4,
           borderRadius: '50%',
-          background: CYB.listen,
-          boxShadow: '0 0 4px rgba(192,132,252,0.6)',
+          background: CYB.neonCyan,
+          boxShadow: `0 0 6px ${CYB.neonCyan}`,
         }} />
       )}
     </div>
@@ -646,26 +692,38 @@ function EndScreen({ guesses, target, today }: { guesses: GuessResult[]; target:
       alignItems: 'center',
       gap: 16,
     }}>
+      <KeylockerLogo variant="combined" size="md" />
+
       {/* Target word */}
       <p style={{
         fontSize: 22,
         fontWeight: 700,
         fontFamily: 'var(--font-display)',
-        color: CYB.text,
+        color: CYB.textBright,
         margin: 0,
+        textShadow: '0 0 8px rgba(255,255,255,0.15)',
       }}>
         {target}
       </p>
 
       {/* Guess count */}
       <p style={{
-        fontSize: 18,
-        color: CYB.correct,
-        textShadow: CYB.textGlowCorrect,
-        fontWeight: 600,
+        fontSize: 14,
+        color: CYB.text,
+        fontWeight: 500,
         margin: 0,
       }}>
-        Cracked in {guesses.length} {guesses.length === 1 ? 'guess' : 'guesses'}
+        Cracked in{' '}
+        <span style={{
+          fontSize: 32,
+          fontWeight: 700,
+          color: CYB.correct,
+          textShadow: `0 0 10px ${CYB.correct}, 0 0 20px ${CYB.correct}, 0 0 40px rgba(0,255,102,0.3)`,
+          verticalAlign: 'middle',
+        }}>
+          {guesses.length}
+        </span>
+        {' '}{guesses.length === 1 ? 'guess' : 'guesses'}
       </p>
 
       {/* Share card preview */}
@@ -673,9 +731,9 @@ function EndScreen({ guesses, target, today }: { guesses: GuessResult[]; target:
         fontFamily: 'var(--font-sans)',
         fontSize: 12,
         lineHeight: 1.6,
-        color: CYB.textDim,
-        background: 'rgba(255,255,255,0.03)',
-        border: `1px solid ${CYB.wheelBorder}`,
+        color: CYB.text,
+        background: 'rgba(0,240,255,0.02)',
+        border: `1px solid rgba(0,240,255,0.15)`,
         borderRadius: 8,
         padding: '12px 16px',
         margin: 0,
@@ -688,12 +746,13 @@ function EndScreen({ guesses, target, today }: { guesses: GuessResult[]; target:
       {/* Copy/Share button */}
       <button
         onClick={handleShare}
+        className="kl-submit-btn"
         style={{
           height: 44,
           padding: '0 24px',
-          background: 'transparent',
-          color: copied ? CYB.correct : CYB.text,
-          border: `1.5px solid ${copied ? CYB.correct : CYB.text}`,
+          background: copied ? 'rgba(0,255,102,0.04)' : 'rgba(0,240,255,0.04)',
+          color: copied ? CYB.correct : CYB.textBright,
+          border: `2px solid ${copied ? CYB.correct : CYB.neonCyan}`,
           borderRadius: 10,
           fontSize: 14,
           fontWeight: 700,
@@ -701,8 +760,9 @@ function EndScreen({ guesses, target, today }: { guesses: GuessResult[]; target:
           cursor: 'pointer',
           letterSpacing: '0.04em',
           boxShadow: copied
-            ? CYB.glowCorrect
-            : '0 0 12px rgba(224,224,232,0.15), 0 0 30px rgba(224,224,232,0.06)',
+            ? `0 0 10px rgba(0,255,102,0.3), 0 0 20px rgba(0,255,102,0.1)`
+            : `0 0 10px rgba(0,240,255,0.3), 0 0 20px rgba(0,240,255,0.1)`,
+          textShadow: copied ? `0 0 6px ${CYB.correct}` : '0 0 6px rgba(0,240,255,0.3)',
           transition: 'all 0.15s',
         }}
       >
@@ -714,31 +774,74 @@ function EndScreen({ guesses, target, today }: { guesses: GuessResult[]; target:
 
 // ── Logo ─────────────────────────────────────────────────────────────────────
 
-function KeylockerLogo() {
+interface KeylockerLogoProps {
+  variant?: 'combined' | 'wordmark' | 'icon';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+}
+
+const LOGO_SIZES = {
+  sm: { cell: 24, gap: 2, font: 20, iconGap: 4, wordmarkGap: 0 },
+  md: { cell: 40, gap: 3, font: 36, iconGap: 8, wordmarkGap: 4 },
+  lg: { cell: 56, gap: 4, font: 48, iconGap: 12, wordmarkGap: 6 },
+  xl: { cell: 72, gap: 5, font: 64, iconGap: 16, wordmarkGap: 8 },
+};
+
+function KeylockerIcon({ cellSize, gapSize }: { cellSize: number; gapSize: number }) {
+  const r = Math.max(2, cellSize * 0.1);
+  const khR = cellSize * 0.14;
+  const khW = cellSize * 0.1;
+  const khH = cellSize * 0.12;
   return (
-    <div className="flex flex-col items-center gap-6">
-      <div className="flex gap-2">
-        <div className="flex flex-col gap-2">
-          <div className="w-14 h-14 bg-white rounded-lg" />
-          <div className="w-14 h-14 bg-white rounded-lg relative">
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <div className="w-4 h-4 bg-black rounded-full" />
-              <div className="w-2 h-3 bg-black rounded-sm" />
-            </div>
-          </div>
-          <div className="w-14 h-14 bg-white rounded-lg" />
+    <div style={{ display: 'flex', gap: gapSize }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: gapSize }}>
+        <div style={{ width: cellSize, height: cellSize, borderRadius: r, background: '#0c0c18', border: '1px solid #1a1a30', boxShadow: '0 0 8px rgba(0,240,255,0.1)' }} />
+        <div style={{ width: cellSize, height: cellSize, borderRadius: r, background: '#0c0c18', border: '1px solid #00F0FF44', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: khR * 2, height: khR * 2, borderRadius: '50%', background: CYB.neonCyan, boxShadow: CYB.glowLower }} />
+          <div style={{ width: khW * 2, height: khH * 2, borderRadius: khW * 0.4, background: CYB.neonCyan, marginTop: -1 }} />
         </div>
-        <div className="flex flex-col gap-2">
-          <div className="w-14 h-14 bg-white rounded-lg" />
-          <div className="w-14 h-14 bg-black border-4 border-white rounded-lg" />
-          <div className="w-14 h-14 bg-white rounded-lg" />
-        </div>
+        <div style={{ width: cellSize, height: cellSize, borderRadius: r, background: '#0c0c18', border: '1px solid #1a1a30', boxShadow: '0 0 8px rgba(0,240,255,0.1)' }} />
       </div>
-      <div className="flex flex-col items-center gap-1">
-        <h1 className="text-5xl font-bold tracking-tight text-white" style={{ fontFamily: 'Space Mono, monospace' }}>
-          KEYLOCKER
-        </h1>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: gapSize }}>
+        <div style={{ width: cellSize, height: cellSize, borderRadius: r, background: '#0c0c18', border: '1px solid #1a1a30', boxShadow: '0 0 8px rgba(0,240,255,0.1)' }} />
+        <div style={{ width: cellSize, height: cellSize, borderRadius: r, background: '#08080F', border: '2px solid #00F0FF66', boxShadow: CYB.glowLower }} />
+        <div style={{ width: cellSize, height: cellSize, borderRadius: r, background: '#0c0c18', border: '1px solid #1a1a30', boxShadow: '0 0 8px rgba(0,240,255,0.1)' }} />
       </div>
+    </div>
+  );
+}
+
+function KeylockerWordmark({ fontSize }: { fontSize: number }) {
+  return (
+    <span style={{
+      fontFamily: 'Space Mono, monospace',
+      fontWeight: 700,
+      fontSize,
+      letterSpacing: '-0.02em',
+      color: CYB.textBright,
+      textShadow: CYB.glowTitle,
+      lineHeight: 1,
+    }}>
+      KEYLOCKER
+    </span>
+  );
+}
+
+function KeylockerLogo({ variant = 'combined', size = 'lg' }: KeylockerLogoProps) {
+  const s = LOGO_SIZES[size];
+
+  if (variant === 'icon') {
+    return <KeylockerIcon cellSize={s.cell} gapSize={s.gap} />;
+  }
+
+  if (variant === 'wordmark') {
+    return <KeylockerWordmark fontSize={s.font} />;
+  }
+
+  // combined
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: s.iconGap }}>
+      <KeylockerIcon cellSize={s.cell} gapSize={s.gap} />
+      <KeylockerWordmark fontSize={s.font} />
     </div>
   );
 }
@@ -784,7 +887,7 @@ function HowToPlay({ onClose }: { onClose: () => void }) {
       }}
     >
       <div style={{
-        background: '#111120',
+        background: '#0a0a16',
         border: `1px solid ${CYB.wheelBorder}`,
         borderRadius: 14,
         maxWidth: 380,
@@ -1111,7 +1214,7 @@ export default function Keylocker() {
         padding: '24px 16px',
       }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
-          <KeylockerLogo />
+          <KeylockerLogo variant="combined" size="lg" />
 
           <p style={{
             fontSize: 14,
@@ -1132,22 +1235,25 @@ export default function Keylocker() {
           </p>
 
           <button
+            className="kl-play-btn"
             onClick={() => { setPhase('playing'); if (isTouchDevice.current) setKeyboardOpen(true); }}
             style={{
               width: '100%',
               maxWidth: 280,
               height: 52,
-              background: 'transparent',
-              color: CYB.text,
-              border: `1.5px solid ${CYB.text}`,
+              background: 'rgba(0,240,255,0.04)',
+              color: CYB.neonCyan,
+              border: `2px solid ${CYB.neonCyan}`,
               borderRadius: 26,
               fontSize: 16,
               fontWeight: 700,
               fontFamily: 'var(--font-sans)',
               cursor: 'pointer',
               letterSpacing: '0.06em',
-              boxShadow: '0 0 12px rgba(224,224,232,0.15), 0 0 30px rgba(224,224,232,0.06)',
+              boxShadow: `0 0 10px rgba(0,240,255,0.3), 0 0 20px rgba(0,240,255,0.1)`,
+              textShadow: CYB.textGlowLower,
               marginTop: 8,
+              transition: 'all 0.15s ease',
             }}
           >
             Play
@@ -1161,14 +1267,17 @@ export default function Keylocker() {
               fontSize: 12,
               color: CYB.textDim,
               background: 'transparent',
-              border: 'none',
+              border: '1px solid rgba(0,240,255,0.15)',
+              borderRadius: 6,
+              padding: '4px 8px',
               outline: 'none',
               cursor: 'pointer',
               fontFamily: 'var(--font-sans)',
               opacity: 0.6,
+              transition: 'opacity 0.15s, border-color 0.15s',
             }}
-            onMouseEnter={e => { (e.target as HTMLSelectElement).style.opacity = '1'; }}
-            onMouseLeave={e => { (e.target as HTMLSelectElement).style.opacity = '0.6'; }}
+            onMouseEnter={e => { const el = e.target as HTMLSelectElement; el.style.opacity = '1'; el.style.borderColor = 'rgba(0,240,255,0.4)'; }}
+            onMouseLeave={e => { const el = e.target as HTMLSelectElement; el.style.opacity = '0.6'; el.style.borderColor = 'rgba(0,240,255,0.15)'; }}
           >
             <option value="daily">Daily Puzzle</option>
             {PLAYTEST_PUZZLES.map((_, i) => (
@@ -1216,20 +1325,9 @@ export default function Keylocker() {
       }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 4, flexShrink: 0, position: 'relative', width: '100%' }}>
-          <h1
-            onClick={() => setPhase('start')}
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontWeight: 700,
-              fontSize: 28,
-              margin: 0,
-              letterSpacing: '-0.01em',
-              color: CYB.text,
-              cursor: 'pointer',
-            }}
-          >
-            Keylocker
-          </h1>
+          <div onClick={() => setPhase('start')} style={{ cursor: 'pointer' }}>
+            <KeylockerLogo variant="wordmark" size="sm" />
+          </div>
           <button
             onClick={() => setShowHtp(true)}
             style={{
@@ -1316,8 +1414,10 @@ export default function Keylocker() {
                   display: 'flex',
                   gap: WHEEL_GAP,
                   justifyContent: 'center',
-                  opacity: recency === 0 ? 1 : recency === 1 ? 0.4 : 0,
+                  opacity: recency === 0 ? 1 : recency === 1 ? 0.35 : 0,
                   transition: 'bottom 0.4s ease-out, opacity 0.4s ease-out',
+                  paddingBottom: recency > 0 ? TRAIL_GAP : 0,
+                  borderBottom: recency > 0 ? '1px solid rgba(0,240,255,0.12)' : 'none',
                 }}>
                   {Array.from(guess.word).map((letter, li) => (
                     <TrailCell
@@ -1349,7 +1449,7 @@ export default function Keylocker() {
                       top: -14,
                       left: '50%',
                       transform: 'translateX(-50%)',
-                      color: '#00e5ff',
+                      color: '#00F0FF',
                       fontSize: 10,
                       lineHeight: 1,
                       animation: 'kb-cursor-blink 1s ease-in-out infinite',
@@ -1375,11 +1475,11 @@ export default function Keylocker() {
                     kbFocused={keyboardOpen && focusedWheel === pos}
                   />
                   <div style={{
-                    marginTop: 3,
+                    marginTop: 4,
                     fontSize: 9,
                     fontWeight: 600,
                     fontFamily: 'var(--font-sans)',
-                    color: r.solved ? CYB.correct : CYB.textMuted,
+                    color: r.solved ? CYB.correct : CYB.textDim,
                     textShadow: r.solved ? CYB.textGlowCorrect : 'none',
                     whiteSpace: 'nowrap',
                     lineHeight: 1,
@@ -1433,12 +1533,13 @@ export default function Keylocker() {
               <button
                 onClick={() => submitRef.current()}
                 disabled={!canSubmit}
+                className="kl-submit-btn"
                 style={{
                   height: 44,
                   padding: '0 24px',
-                  background: 'transparent',
-                  color: canSubmit ? CYB.text : CYB.textMuted,
-                  border: canSubmit ? `1.5px solid ${CYB.text}` : `1.5px solid ${CYB.wheelBorder}`,
+                  background: canSubmit ? 'rgba(0,240,255,0.04)' : 'transparent',
+                  color: canSubmit ? CYB.textBright : CYB.textMuted,
+                  border: canSubmit ? `2px solid ${CYB.neonCyan}` : `2px solid rgba(0,240,255,0.2)`,
                   borderRadius: 10,
                   fontSize: 14,
                   fontWeight: 700,
@@ -1446,8 +1547,11 @@ export default function Keylocker() {
                   cursor: canSubmit ? 'pointer' : 'default',
                   whiteSpace: 'nowrap',
                   letterSpacing: canSubmit ? '0.06em' : '0',
-                  boxShadow: canSubmit ? '0 0 12px rgba(224,224,232,0.15), 0 0 30px rgba(224,224,232,0.06)' : 'none',
-                  transition: 'border-color 0.15s, color 0.15s, box-shadow 0.15s',
+                  boxShadow: canSubmit
+                    ? '0 0 10px rgba(0,240,255,0.3), 0 0 20px rgba(0,240,255,0.1)'
+                    : 'none',
+                  textShadow: canSubmit ? '0 0 6px rgba(0,240,255,0.3)' : 'none',
+                  transition: 'all 0.15s ease',
                 }}
               >
                 {submitLabel}
@@ -1464,16 +1568,16 @@ export default function Keylocker() {
                 marginTop: 10,
                 height: 34,
                 padding: '0 14px',
-                background: keyboardOpen ? 'rgba(0,229,255,0.08)' : 'transparent',
-                color: keyboardOpen ? '#00e5ff' : CYB.textDim,
-                border: `1.5px solid ${keyboardOpen ? '#00e5ff' : CYB.wheelBorder}`,
+                background: keyboardOpen ? 'rgba(0,240,255,0.06)' : 'transparent',
+                color: keyboardOpen ? CYB.neonCyan : CYB.textDim,
+                border: `1.5px solid ${keyboardOpen ? CYB.neonCyan : 'rgba(0,240,255,0.2)'}`,
                 borderRadius: 8,
                 fontSize: 12,
                 fontWeight: 600,
                 fontFamily: 'var(--font-sans)',
                 cursor: 'pointer',
                 letterSpacing: '0.04em',
-                boxShadow: keyboardOpen ? '0 0 8px rgba(0,229,255,0.25)' : 'none',
+                boxShadow: keyboardOpen ? '0 0 8px rgba(0,240,255,0.25)' : 'none',
                 transition: 'all 0.15s',
                 alignItems: 'center',
                 gap: 6,
@@ -1503,6 +1607,7 @@ export default function Keylocker() {
           focusedWheel={focusedWheel}
           onLeft={() => setFocusedWheel(prev => Math.max(0, prev - 1))}
           onRight={() => setFocusedWheel(prev => Math.min(4, prev + 1))}
+          enterActive={canSubmit}
         />
       )}
 

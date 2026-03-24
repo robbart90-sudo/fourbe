@@ -1,18 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <!-- Shadow -->
-  <rect x="2" y="2" width="28" height="28" rx="2" fill="#1a1a2e"/>
   <!-- Background -->
-  <rect x="0" y="0" width="28" height="28" rx="2" fill="#0a0a0f" stroke="#333" stroke-width="0.5"/>
-  <!-- 2×3 grid of cells -->
-  <!-- Col 1 -->
-  <rect x="2" y="2" width="10" height="7" rx="1.5" fill="#ffffff"/>
-  <rect x="2" y="10.5" width="10" height="7" rx="1.5" fill="#ffffff"/>
-  <!-- Keyhole on middle-left cell -->
-  <circle cx="7" cy="12.5" r="2" fill="#0a0a0f"/>
-  <rect x="6" y="13.5" width="2" height="2.5" rx="0.5" fill="#0a0a0f"/>
-  <rect x="2" y="19" width="10" height="7" rx="1.5" fill="#ffffff"/>
-  <!-- Col 2 -->
-  <rect x="14" y="2" width="10" height="7" rx="1.5" fill="#ffffff"/>
-  <rect x="14" y="10.5" width="10" height="7" rx="1.5" fill="#0a0a0f" stroke="#ffffff" stroke-width="1.5"/>
-  <rect x="14" y="19" width="10" height="7" rx="1.5" fill="#ffffff"/>
+  <rect x="0" y="0" width="32" height="32" rx="4" fill="#08080F"/>
+  <!-- 2×3 grid: col 1 -->
+  <rect x="2" y="2" width="12" height="8" rx="1.5" fill="#0c0c18" stroke="#1a1a30" stroke-width="0.5"/>
+  <rect x="2" y="12" width="12" height="8" rx="1.5" fill="#0c0c18" stroke="#00F0FF" stroke-opacity="0.27" stroke-width="0.5"/>
+  <!-- Keyhole -->
+  <circle cx="8" cy="14.5" r="2" fill="#00F0FF"/>
+  <rect x="7" y="15.5" width="2" height="2.5" rx="0.5" fill="#00F0FF"/>
+  <rect x="2" y="22" width="12" height="8" rx="1.5" fill="#0c0c18" stroke="#1a1a30" stroke-width="0.5"/>
+  <!-- 2×3 grid: col 2 -->
+  <rect x="18" y="2" width="12" height="8" rx="1.5" fill="#0c0c18" stroke="#1a1a30" stroke-width="0.5"/>
+  <rect x="18" y="12" width="12" height="8" rx="1.5" fill="#08080F" stroke="#00F0FF" stroke-opacity="0.4" stroke-width="1.5"/>
+  <rect x="18" y="22" width="12" height="8" rx="1.5" fill="#0c0c18" stroke="#1a1a30" stroke-width="0.5"/>
 </svg>
