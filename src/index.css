@@ -62,7 +62,7 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #ffffff;
+  background: #F8F5F0;
   color: #1a1a1b;
   overscroll-behavior: none;
 }

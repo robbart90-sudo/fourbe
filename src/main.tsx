@@ -44,23 +44,21 @@ function Nav() {
 function FourbeApp() {
   if (!hasAccess) return <ComingSoon />;
   return (
-    <div className="fourbe-theme" style={{ width: '100vw', marginLeft: 'calc(-50vw + 50%)' }}>
-      <div style={{ maxWidth: 600, margin: '0 auto', padding: '0 1rem' }}>
-        <Nav />
-        <Routes>
-          <Route path="/" element={<Play />} />
-          <Route path="/play" element={<Play />} />
-          <Route
-            path="/editor"
-            element={
-              <Suspense fallback={null}>
-                <Editor />
-              </Suspense>
-            }
-          />
-        </Routes>
-      </div>
-    </div>
+    <>
+      <Nav />
+      <Routes>
+        <Route path="/" element={<Play />} />
+        <Route path="/play" element={<Play />} />
+        <Route
+          path="/editor"
+          element={
+            <Suspense fallback={null}>
+              <Editor />
+            </Suspense>
+          }
+        />
+      </Routes>
+    </>
   );
 }
 
