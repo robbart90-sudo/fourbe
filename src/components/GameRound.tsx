@@ -284,17 +284,17 @@ const GameRound = forwardRef<GameRoundHandle, GameRoundProps>(function GameRound
   }
 
   return (
-    <div className={`flex flex-col items-center ${compact ? 'pt-2 pb-4' : 'pt-6 pb-16'} min-h-[calc(100vh-52px)] relative`}>
-      {/* Running score */}
-      {runningScore > 0 && (
-        <div className="absolute top-2 right-0 text-sm text-gray-300 tabular-nums font-sans">
-          {runningScore.toLocaleString()}
+    <div className={`flex flex-col items-center ${compact ? 'pt-4 pb-4' : 'pt-6 pb-16'} min-h-[calc(100vh-52px)] relative`}>
+      {/* Round label + running score on same line */}
+      <div className={`flex items-center justify-center w-full max-w-md ${compact ? 'mb-2' : 'mb-2'}`}>
+        <div className="text-xs font-medium text-gray-400 uppercase tracking-widest">
+          {label ?? `Round ${round.round}`}
         </div>
-      )}
-
-      {/* Round label */}
-      <div className={`text-xs font-medium text-gray-400 uppercase tracking-widest ${compact ? 'mb-1' : 'mb-2'}`}>
-        {label ?? `Round ${round.round}`}
+        {runningScore > 0 && (
+          <div className="ml-auto text-sm text-gray-300 tabular-nums font-sans">
+            {runningScore.toLocaleString()}
+          </div>
+        )}
       </div>
 
       {/* Clue */}

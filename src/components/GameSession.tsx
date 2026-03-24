@@ -511,9 +511,9 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
     };
 
     const finalHeaderContent = (
-      <div className="w-full max-w-md mb-2">
+      <div className="w-full max-w-md mb-2 mt-3">
         {/* 4 compact answers — 2×2 grid on wider, stacked on narrow */}
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-3" style={{ gridTemplateColumns: availableWidth >= 340 ? '1fr 1fr' : '1fr' }}>
+        <div className="grid gap-x-4 gap-y-2.5 mb-4" style={{ gridTemplateColumns: availableWidth >= 340 ? '1fr 1fr' : '1fr' }}>
           {puzzle.rounds.map((r, i) => {
             const result = results[i];
             const solved = result?.solved ?? false;
@@ -523,31 +523,33 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
               : null;
             const greenClass = solved ? 'text-player' : 'text-gray-400';
             return (
-              <div key={i} className="min-w-0">
-                <p className="text-[11px] font-bold uppercase tracking-wide leading-tight break-words">
-                  <span className="text-[10px] text-gray-300 font-medium mr-1">{i + 1}</span>
-                  {[...upper].map((ch, ci) =>
-                    highlightSet?.has(ci)
-                      ? <span key={ci} style={{ color: '#E8530E' }}>{ch}</span>
-                      : <span key={ci} className={greenClass}>{ch}</span>
+              <div key={i} className="min-w-0 flex gap-1.5">
+                <span className="text-xs text-gray-300 font-medium shrink-0 w-3 text-right" style={{ lineHeight: '1.2' }}>{i + 1}</span>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold uppercase tracking-wide leading-tight break-words">
+                    {[...upper].map((ch, ci) =>
+                      highlightSet?.has(ci)
+                        ? <span key={ci} style={{ color: '#E8530E' }}>{ch}</span>
+                        : <span key={ci} className={greenClass}>{ch}</span>
+                    )}
+                  </p>
+                  <p className="text-[11px] text-gray-400 italic leading-tight mt-0.5">{r.clue}</p>
+                  {hintsUsed >= 2 && r.connection && (
+                    <p className="text-[11px] leading-tight mt-0.5" style={{ color: '#E8530E' }}>{r.connection}</p>
                   )}
-                </p>
-                <p className="text-[10px] text-gray-400 italic leading-tight mt-0.5">{r.clue}</p>
-                {hintsUsed >= 2 && r.connection && (
-                  <p className="text-[10px] leading-tight mt-0.5" style={{ color: '#E8530E' }}>{r.connection}</p>
-                )}
+                </div>
               </div>
             );
           })}
         </div>
 
-        {/* Hint buttons */}
-        <div className="flex gap-1.5 mb-1">
+        {/* Hint buttons — stack vertically on narrow screens */}
+        <div className="flex flex-col gap-1.5 mb-1" style={availableWidth >= 400 ? { flexDirection: 'row' } : {}}>
           <button
             type="button"
             onClick={handleHint1}
             disabled={isHintDisabled(1)}
-            className={`flex-1 px-1.5 py-1.5 text-[11px] font-medium rounded-lg border transition-colors text-center ${hintBtnClass(1)}`}
+            className={`flex-1 px-2 py-1.5 text-[11px] font-medium rounded-lg border transition-colors text-center whitespace-nowrap ${hintBtnClass(1)}`}
           >
             {hintsUsed >= 1 ? (
               <span>Category<br /><span className="text-[10px] font-normal">{puzzle.subjectCategory || '???'}</span></span>
@@ -559,33 +561,37 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
             type="button"
             onClick={handleHint2}
             disabled={isHintDisabled(2)}
-            className={`flex-1 px-1.5 py-1.5 text-[11px] font-medium rounded-lg border transition-colors text-center ${hintBtnClass(2)}`}
+            className={`flex-1 px-2 py-1.5 text-[11px] font-medium rounded-lg border transition-colors text-center whitespace-nowrap ${hintBtnClass(2)}`}
           >
             {hintsUsed >= 2 ? (
               <span>Connections<br /><span className="text-[10px] font-normal">Revealed</span></span>
             ) : (
-              <span className="flex items-center justify-center gap-1">
-                {hintsUsed < 1 && <LockIcon />}
-                Connections
-              </span>
+              <>
+                <span className="inline-flex items-center justify-center gap-1">
+                  {hintsUsed < 1 && <LockIcon />}
+                  Connections
+                </span>
+                <br /><span className="text-[10px] font-normal text-gray-400">-1 life</span>
+              </>
             )}
-            {hintsUsed < 2 && <span className="block text-[10px] font-normal text-gray-400">-1 life</span>}
           </button>
           <button
             type="button"
             onClick={handleHint3}
             disabled={isHintDisabled(3)}
-            className={`flex-1 px-1.5 py-1.5 text-[11px] font-medium rounded-lg border transition-colors text-center ${hintBtnClass(3)}`}
+            className={`flex-1 px-2 py-1.5 text-[11px] font-medium rounded-lg border transition-colors text-center whitespace-nowrap ${hintBtnClass(3)}`}
           >
             {hintsUsed >= 3 ? (
               <span>Vowels<br /><span className="text-[10px] font-normal">Placed</span></span>
             ) : (
-              <span className="flex items-center justify-center gap-1">
-                {hintsUsed < 2 && <LockIcon />}
-                Vowels
-              </span>
+              <>
+                <span className="inline-flex items-center justify-center gap-1">
+                  {hintsUsed < 2 && <LockIcon />}
+                  Vowels
+                </span>
+                <br /><span className="text-[10px] font-normal text-gray-400">-1 life</span>
+              </>
             )}
-            {hintsUsed < 3 && <span className="block text-[10px] font-normal text-gray-400">-1 life</span>}
           </button>
         </div>
 
