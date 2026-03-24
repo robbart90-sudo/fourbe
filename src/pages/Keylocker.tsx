@@ -1064,10 +1064,21 @@ export default function Keylocker() {
       if (checkedWheel === null) return;
       const fb = getListenFeedback(word, target, checkedWheel);
       setGuesses(prev => [...prev, { word, feedback: fb, listenedPos: checkedWheel }]);
-      setLockedIn(false);
-      setCheckedWheel(null);
-      setFocusedWheel(0);
-      if (fb.every(f => f === 'correct')) { setWon(true); setKeyboardOpen(false); }
+      if (fb.every(f => f === 'correct')) {
+        setLockedIn(false);
+        setCheckedWheel(null);
+        setFocusedWheel(0);
+        setWon(true);
+        setKeyboardOpen(false);
+      } else {
+        // Brief pause so player sees feedback before resetting to Phase 1
+        setTimeout(() => {
+          setLockedIn(false);
+          setCheckedWheel(null);
+          setFocusedWheel(0);
+          if (isTouchDevice.current) setKeyboardOpen(true);
+        }, 500);
+      }
     }
   };
 
