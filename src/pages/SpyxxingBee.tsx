@@ -17,8 +17,19 @@ type CellState = 'hidden' | 'revealed' | 'found' | 'adjacent';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type WordSearchInstance = any;
 
-const DICTIONARY = ["BACON", "EGGS", "TOAST", "COFFEE", "WAFFLE", "CEREAL"];
-const THEME_NAME = 'Breakfast';
+interface Puzzle {
+  theme: string;
+  words: string[];
+}
+
+const PUZZLES: Puzzle[] = [
+  { theme: 'Breakfast', words: ['BACON', 'EGGS', 'TOAST', 'COFFEE', 'WAFFLE', 'CEREAL'] },
+  { theme: 'US Presidents', words: ['LINCOLN', 'OBAMA', 'NIXON', 'ADAMS', 'GRANT', 'TYLER'] },
+  { theme: 'Beach', words: ['TOWEL', 'WAVES', 'SHELLS', 'SAND', 'SUNBURN', 'COOLER'] },
+  { theme: 'US States', words: ['TEXAS', 'OHIO', 'MAINE', 'ALASKA', 'IDAHO', 'NEVADA'] },
+  { theme: 'Carmakers', words: ['TOYOTA', 'HONDA', 'FORD', 'TESLA', 'VOLVO', 'SUBARU'] },
+  { theme: 'Zoo Animals', words: ['TIGER', 'ZEBRA', 'PANDA', 'MONKEY', 'OTTER', 'HIPPO'] },
+];
 const QWERTY_ROWS = [
   'QWERTYUIOP'.split(''),
   'ASDFGHJKL'.split(''),
@@ -44,12 +55,12 @@ function formatTime(seconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-function generateGrid() {
+function generateGrid(dictionary: string[]) {
   const ws: WordSearchInstance = new WordSearch({
     cols: COLS,
     rows: ROWS,
     disabledDirections: ["NW", "NE", "SW", "SE"],
-    dictionary: DICTIONARY,
+    dictionary,
     maxWords: 20,
     backwardsProbability: 0.5,
     upperCase: true,
@@ -58,7 +69,7 @@ function generateGrid() {
   console.log('Placed words:', ws.data.words);
 
   const placedCleans = new Set(ws.data.words.map((w: PlacedWord) => w.clean));
-  const unplaced = DICTIONARY.filter(w => !placedCleans.has(w));
+  const unplaced = dictionary.filter(w => !placedCleans.has(w));
   if (unplaced.length > 0) {
     console.warn('Unplaced words:', unplaced);
   }
@@ -110,6 +121,7 @@ export default function SpyxxingBee() {
   const [trailPoints, setTrailPoints] = useState<{ x: number; y: number }[]>([]);
   const [boardPulse, setBoardPulse] = useState(false);
   const [foundWordPaths, setFoundWordPaths] = useState<{ word: string; cells: { r: number; c: number }[] }[]>([]);
+  const [puzzleIndex, setPuzzleIndex] = useState(0);
   const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -127,8 +139,12 @@ export default function SpyxxingBee() {
 
   const DRAG_THRESHOLD = 5;
 
+  const puzzleIndexRef = useRef(puzzleIndex);
+  puzzleIndexRef.current = puzzleIndex;
+
   const initGame = useCallback(() => {
-    const { grid: newGrid, words: newWords } = generateGrid();
+    const puzzle = PUZZLES[puzzleIndexRef.current];
+    const { grid: newGrid, words: newWords } = generateGrid(puzzle.words);
     setGrid(newGrid);
     setWords(newWords);
     wordsRef.current = newWords;
@@ -166,6 +182,11 @@ export default function SpyxxingBee() {
     intervalRef.current = setInterval(() => {
       setElapsed(prev => prev + 1);
     }, 1000);
+  }, []);
+
+  const switchPuzzle = useCallback((idx: number) => {
+    setPuzzleIndex(idx);
+    puzzleIndexRef.current = idx;
   }, []);
 
   // Favicon + title + OG swap
@@ -690,7 +711,7 @@ export default function SpyxxingBee() {
             textTransform: 'uppercase',
           }}
         >
-          {THEME_NAME} — {DICTIONARY.length} words
+          {PUZZLES[puzzleIndex].theme} — {PUZZLES[puzzleIndex].words.length} words
         </p>
 
         {/* How to Play */}
@@ -776,6 +797,43 @@ export default function SpyxxingBee() {
         >
           PLAY
         </button>
+
+        {/* Puzzle selector — start page */}
+        <div
+          style={{
+            marginTop: 32,
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            gap: 8,
+            maxWidth: 400,
+          }}
+        >
+          {PUZZLES.map((p, i) => (
+            <button
+              key={p.theme}
+              onClick={() => switchPuzzle(i)}
+              className="cursor-pointer"
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontWeight: 600,
+                fontSize: '0.75rem',
+                letterSpacing: '0.04em',
+                padding: '8px 14px',
+                background: i === puzzleIndex ? '#E8530E' : '#F5F0E8',
+                color: i === puzzleIndex ? '#FFFFFF' : '#1A1A1A',
+                border: '1px solid #1A1A1A',
+                borderRadius: 3,
+                boxShadow: i === puzzleIndex ? 'none' : '2px 2px 0px #1A1A1A',
+                transform: i === puzzleIndex ? 'translate(2px, 2px)' : 'none',
+                cursor: 'pointer',
+                transition: 'all 0.1s ease',
+              }}
+            >
+              {p.theme.toUpperCase()}
+            </button>
+          ))}
+        </div>
       </div>
     );
   }
@@ -822,7 +880,7 @@ export default function SpyxxingBee() {
             textTransform: 'uppercase',
           }}
         >
-          {THEME_NAME} — {words.length} words
+          {PUZZLES[puzzleIndex].theme} — {words.length} words
         </p>
 
         {/* Final time */}
@@ -886,6 +944,42 @@ export default function SpyxxingBee() {
         >
           PLAY AGAIN
         </button>
+
+        {/* Puzzle selector — results page */}
+        <div
+          style={{
+            marginTop: 24,
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            gap: 6,
+            maxWidth: 380,
+          }}
+        >
+          {PUZZLES.map((p, i) => (
+            <button
+              key={p.theme}
+              onClick={() => { switchPuzzle(i); setTimeout(initGame, 0); }}
+              className="cursor-pointer"
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontWeight: 600,
+                fontSize: '0.7rem',
+                letterSpacing: '0.04em',
+                padding: '5px 10px',
+                background: i === puzzleIndex ? '#E8530E' : 'transparent',
+                color: i === puzzleIndex ? '#FFFFFF' : '#1A1A1A',
+                opacity: i === puzzleIndex ? 1 : 0.45,
+                border: i === puzzleIndex ? '1px solid #E8530E' : '1px solid #1A1A1A',
+                borderRadius: 2,
+                cursor: 'pointer',
+                transition: 'all 0.1s ease',
+              }}
+            >
+              {p.theme.toUpperCase()}
+            </button>
+          ))}
+        </div>
       </div>
     );
   }
@@ -1087,7 +1181,7 @@ export default function SpyxxingBee() {
           textTransform: 'uppercase',
         }}
       >
-        {THEME_NAME} — {words.length} words
+        {PUZZLES[puzzleIndex].theme} — {words.length} words
       </p>
 
       {/* Progress row: found words (left) | counter + timer (center) | found words (right) */}
@@ -1461,6 +1555,42 @@ export default function SpyxxingBee() {
       >
         RESET
       </button>
+
+      {/* Puzzle selector — game page */}
+      <div
+        style={{
+          marginTop: 12,
+          display: 'flex',
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+          gap: 5,
+          maxWidth: 380,
+        }}
+      >
+        {PUZZLES.map((p, i) => (
+          <button
+            key={p.theme}
+            onClick={() => { switchPuzzle(i); setTimeout(initGame, 0); }}
+            className="cursor-pointer"
+            style={{
+              fontFamily: "'Inter', sans-serif",
+              fontWeight: 600,
+              fontSize: '0.65rem',
+              letterSpacing: '0.04em',
+              padding: '4px 8px',
+              background: i === puzzleIndex ? '#E8530E' : 'transparent',
+              color: i === puzzleIndex ? '#FFFFFF' : '#1A1A1A',
+              opacity: i === puzzleIndex ? 1 : 0.35,
+              border: i === puzzleIndex ? '1px solid #E8530E' : '1px solid #1A1A1A',
+              borderRadius: 2,
+              cursor: 'pointer',
+              transition: 'all 0.1s ease',
+            }}
+          >
+            {p.theme.toUpperCase()}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
