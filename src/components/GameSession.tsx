@@ -88,8 +88,8 @@ function AnswerTileRow({ answer, variant, availableWidth, highlightCharIndices }
               ) : (
                 <div
                   key={ci}
-                  className="flex items-center justify-center font-bold font-sans select-none" style={{ color: '#9a8e80' }}
-                  style={{ width: punctWidth, height: tileSize, fontSize }}
+                  className="flex items-center justify-center font-bold font-sans select-none"
+                  style={{ color: '#9a8e80', width: punctWidth, height: tileSize, fontSize }}
                 >
                   {ch}
                 </div>
