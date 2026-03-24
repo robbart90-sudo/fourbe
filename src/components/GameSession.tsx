@@ -46,7 +46,7 @@ function AnswerTileRow({ answer, variant, availableWidth, highlightCharIndices }
   const upper = answer.toUpperCase();
   const defaultTileClass = variant === 'solved'
     ? 'border-player bg-player text-white'
-    : 'border-gray-300 bg-gray-100 text-gray-400';
+    : 'border-[#c9bfb0] bg-[#efe9e0] text-[#9a8e80]';
 
   const tileSize = useMemo(() => {
     const words = upper.split(' ');
@@ -88,7 +88,7 @@ function AnswerTileRow({ answer, variant, availableWidth, highlightCharIndices }
               ) : (
                 <div
                   key={ci}
-                  className="flex items-center justify-center font-bold font-sans text-gray-500 select-none"
+                  className="flex items-center justify-center font-bold font-sans select-none" style={{ color: '#9a8e80' }}
                   style={{ width: punctWidth, height: tileSize, fontSize }}
                 >
                   {ch}
@@ -191,10 +191,10 @@ function ScoreBar({
         transition: 'opacity 0.3s ease-out',
       }}
     >
-      <span className="text-xs font-medium text-gray-500 w-16 text-right shrink-0 tabular-nums">
+      <span className="text-xs font-medium w-16 text-right shrink-0 tabular-nums" style={{ color: '#6b5e50' }}>
         {label}
       </span>
-      <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
+      <div className="flex-1 h-2.5 rounded-full overflow-hidden" style={{ background: '#e8e2d9' }}>
         <div
           className={`h-full rounded-full ${colorClass}`}
           style={{
@@ -209,13 +209,13 @@ function ScoreBar({
             <span
               key={i}
               className={`inline-block w-[7px] h-[7px] rounded-full ${
-                i < lives ? 'bg-[#1a1a1b]' : 'border border-gray-300'
+                i < lives ? 'bg-[#1a1a1b]' : 'border border-[#c9bfb0]'
               }`}
             />
           ))}
         </span>
       )}
-      <span className="text-xs font-medium text-gray-400 w-14 tabular-nums">
+      <span className="text-xs font-medium w-14 tabular-nums" style={{ color: '#9a8e80' }}>
         {score > 0 ? score.toLocaleString() : '0'}
       </span>
     </div>
@@ -226,21 +226,24 @@ function LeaveConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onC
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onCancel}>
       <div
-        className="bg-white rounded-xl shadow-lg p-6 mx-4 max-w-xs w-full text-center animate-fade-in"
+        className="shadow-lg p-6 mx-4 max-w-xs w-full text-center animate-fade-in"
+        style={{ background: '#F8F5F0' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="text-lg font-semibold text-gray-800 mb-1">Leave game?</p>
-        <p className="text-sm text-gray-500 mb-5">Your progress will be lost.</p>
+        <p className="text-lg font-semibold mb-1" style={{ color: '#1a1a1b' }}>Leave game?</p>
+        <p className="text-sm mb-5" style={{ color: '#6b5e50' }}>Your progress will be lost.</p>
         <div className="flex gap-3">
           <button
             onClick={onCancel}
-            className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors"
+            className="flex-1 py-2.5 text-sm font-semibold cursor-pointer transition-colors"
+            style={{ background: '#e8e2d9', color: '#6b5e50' }}
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className="flex-1 py-2.5 text-sm font-semibold text-white bg-black rounded-lg cursor-pointer hover:bg-gray-900 transition-colors"
+            className="flex-1 py-2.5 text-sm font-semibold cursor-pointer transition-colors"
+            style={{ background: '#1a1a1b', color: '#F8F5F0' }}
           >
             Leave
           </button>
@@ -424,28 +427,49 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
   if (phase === 'start') {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-52px)]">
-        <div className="flex flex-col items-center" style={{ gap: '20px' }}>
-          <FourbeLogo />
-          <h1 className="text-3xl tracking-tight" style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 32 }}>
-            Fourbe
-          </h1>
-          <p className="text-gray-500 text-base">
+        <div className="flex flex-col items-center w-full max-w-sm" style={{ gap: '0px' }}>
+          {/* Newspaper masthead */}
+          <hr className="fb-rule w-full" />
+          <div className="py-3 w-full text-center">
+            <FourbeLogo />
+            <h1
+              className="tracking-tight text-[#1a1a1b] mt-4"
+              style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 56, lineHeight: 1 }}
+            >
+              Fourbe
+            </h1>
+          </div>
+          <hr className="fb-rule-double w-full" />
+
+          {/* Tagline & date */}
+          <p
+            className="text-center mt-4"
+            style={{ fontFamily: 'var(--font-serif)', fontSize: 16, color: '#6b5e50', fontStyle: 'italic' }}
+          >
             Four clues. Five answers.
           </p>
-          <p className="text-gray-400 text-sm">
+          <p className="text-sm mt-1" style={{ color: '#9a8e80' }}>
             {formatDate()}
           </p>
+
+          {/* Play button */}
           <button
             onClick={() => setPhase('playing')}
-            className="w-full max-w-xs py-4 text-lg font-semibold bg-black text-white rounded-full cursor-pointer hover:bg-gray-900 transition-colors"
-            style={{ marginTop: 12 }}
+            className="w-full py-4 text-lg font-semibold cursor-pointer transition-colors mt-6"
+            style={{
+              background: '#1a1a1b',
+              color: '#F8F5F0',
+              border: '2px solid #1a1a1b',
+              fontFamily: 'var(--font-sans)',
+            }}
           >
             Play
           </button>
           {dateSelector}
           <button
             onClick={() => setShowHtp(true)}
-            className="text-xs text-gray-400 hover:text-gray-600 cursor-pointer transition-colors mt-1"
+            className="text-xs cursor-pointer transition-colors mt-3"
+            style={{ color: '#9a8e80' }}
           >
             How to Play
           </button>
@@ -496,11 +520,11 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
       const isActive = hintsUsed === hintNum - 1;
       const noLives = finalLives <= 0;
 
-      if (isUsed) return 'bg-gray-100 text-gray-400 border-gray-200 cursor-default';
-      if (isLocked) return 'bg-gray-50 text-gray-300 border-gray-200 cursor-default';
-      if (noLives) return 'bg-gray-50 text-gray-300 border-gray-200 cursor-not-allowed';
-      if (isActive) return 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 cursor-pointer';
-      return 'bg-gray-50 text-gray-300 border-gray-200 cursor-default';
+      if (isUsed) return 'bg-[#efe9e0] text-[#9a8e80] border-[#d4c8b8] cursor-default';
+      if (isLocked) return 'bg-[#f3ede5] text-[#c9bfb0] border-[#e8e2d9] cursor-default';
+      if (noLives) return 'bg-[#f3ede5] text-[#c9bfb0] border-[#e8e2d9] cursor-not-allowed';
+      if (isActive) return 'bg-[#F8F5F0] text-[#1a1a1b] border-[#c9bfb0] hover:bg-[#efe9e0] cursor-pointer';
+      return 'bg-[#f3ede5] text-[#c9bfb0] border-[#e8e2d9] cursor-default';
     };
 
     const isHintDisabled = (hintNum: number) => {
@@ -521,18 +545,18 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
             const highlightSet = (hintsUsed >= 2 && (r.connectionCharIndices ?? []).length > 0)
               ? new Set(r.connectionCharIndices)
               : null;
-            const greenClass = solved ? 'text-player' : 'text-gray-400';
+            const greenClass = solved ? 'text-player' : 'text-[#9a8e80]';
             return (
               <div key={i} className="min-w-0">
                 <p className="text-[11px] font-bold uppercase tracking-wide leading-tight break-words">
-                  <span className="text-[10px] text-gray-300 font-medium mr-1">{i + 1}</span>
+                  <span className="text-[10px] font-medium mr-1" style={{ color: '#c9bfb0' }}>{i + 1}</span>
                   {[...upper].map((ch, ci) =>
                     highlightSet?.has(ci)
                       ? <span key={ci} style={{ color: '#E8530E' }}>{ch}</span>
                       : <span key={ci} className={greenClass}>{ch}</span>
                   )}
                 </p>
-                <p className="text-[10px] text-gray-400 italic leading-tight mt-0.5">{r.clue}</p>
+                <p className="text-[10px] italic leading-tight mt-0.5" style={{ color: '#9a8e80' }}>{r.clue}</p>
                 {hintsUsed >= 2 && r.connection && (
                   <p className="text-[10px] leading-tight mt-0.5" style={{ color: '#E8530E' }}>{r.connection}</p>
                 )}
@@ -552,7 +576,7 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
             {hintsUsed >= 1 ? (
               <span>Category<br /><span className="text-[10px] font-normal">{puzzle.subjectCategory || '???'}</span></span>
             ) : (
-              <span>Category<br /><span className="text-[10px] font-normal text-gray-400">-1 life</span></span>
+              <span>Category<br /><span className="text-[10px] font-normal" style={{ color: '#9a8e80' }}>-1 life</span></span>
             )}
           </button>
           <button
@@ -569,7 +593,7 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
                 Connections
               </span>
             )}
-            {hintsUsed < 2 && <span className="block text-[10px] font-normal text-gray-400">-1 life</span>}
+            {hintsUsed < 2 && <span className="block text-[10px] font-normal" style={{ color: '#9a8e80' }}>-1 life</span>}
           </button>
           <button
             type="button"
@@ -585,14 +609,14 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
                 Vowels
               </span>
             )}
-            {hintsUsed < 3 && <span className="block text-[10px] font-normal text-gray-400">-1 life</span>}
+            {hintsUsed < 3 && <span className="block text-[10px] font-normal" style={{ color: '#9a8e80' }}>-1 life</span>}
           </button>
         </div>
 
         {/* Category display when hint 1 is used */}
         {hintsUsed >= 1 && (
-          <p className="text-xs font-medium text-gray-500 text-center mt-1 mb-0.5">
-            Category: <span className="text-gray-800">{puzzle.subjectCategory || '???'}</span>
+          <p className="text-xs font-medium text-center mt-1 mb-0.5" style={{ color: '#6b5e50' }}>
+            Category: <span style={{ color: '#1a1a1b' }}>{puzzle.subjectCategory || '???'}</span>
           </p>
         )}
       </div>
@@ -626,7 +650,7 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
   // ===========================================
 
   const finalSolved = finalResult?.solved ?? false;
-  const fourbeBarColor = finalSolved ? 'bg-player' : 'bg-gray-300';
+  const fourbeBarColor = finalSolved ? 'bg-player' : 'bg-[#c9bfb0]';
 
   const fadeUp = (step: number) => ({
     opacity: revealStep >= step ? 1 : 0,
@@ -635,27 +659,34 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
   });
 
   return (
-    <div className="flex flex-col items-center pt-12 pb-16 min-h-[calc(100vh-52px)]">
+    <div className="flex flex-col items-center pt-8 pb-16 min-h-[calc(100vh-52px)]">
 
-      {/* 1. THE SUBJECT */}
-      <h2
-        className="text-3xl text-gray-800"
+      {/* 1. THE SUBJECT — newspaper headline reveal */}
+      <div
+        className="w-full max-w-md text-center"
         style={{
-          fontFamily: 'var(--font-display)',
-          fontWeight: 800,
           opacity: revealStep >= 1 ? 1 : 0,
           transform: revealStep >= 1 ? 'scale(1)' : 'scale(0.85)',
           transition: 'opacity 0.4s ease-out, transform 0.4s ease-out',
         }}
       >
-        {puzzle.subject}
-      </h2>
+        <hr className="fb-rule" />
+        <h2
+          className="py-4"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 800,
+            fontSize: 36,
+            color: '#1a1a1b',
+            lineHeight: 1.1,
+          }}
+        >
+          {puzzle.subject}
+        </h2>
+        <hr className="fb-rule-double" />
+      </div>
 
-      {/* Divider */}
-      <div
-        className="w-16 h-px bg-gray-200 my-8"
-        style={fadeUp(1)}
-      />
+      <div className="h-8" style={fadeUp(1)} />
 
       {/* 2. ROUND SCORE BARS (all 5) */}
       <div
@@ -672,7 +703,7 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
               label={`Round ${r.round}`}
               score={score}
               maxScore={MAX_ROUND_SCORE}
-              colorClass={solved ? 'bg-player' : 'bg-gray-300'}
+              colorClass={solved ? 'bg-player' : 'bg-[#c9bfb0]'}
               delay={i * 100}
               active={revealStep >= 2}
               lives={result?.lives ?? 0}
@@ -695,10 +726,10 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
         className="text-center mb-10"
         style={fadeUp(3)}
       >
-        <p className="text-5xl text-gray-800 tabular-nums mb-1" style={{ fontFamily: 'var(--font-display)', fontWeight: 800 }}>
+        <p className="tabular-nums mb-1" style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 48, color: '#1a1a1b' }}>
           {animatedTotal.toLocaleString()}
         </p>
-        <p className="text-sm text-gray-400">total points</p>
+        <p className="text-sm" style={{ color: '#9a8e80', fontFamily: 'var(--font-serif)', fontStyle: 'italic' }}>total points</p>
       </div>
 
       {/* 4. ROUND DETAIL CARDS */}
@@ -713,21 +744,23 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
           const charIndices = (r.connectionCharIndices ?? []).length > 0 ? r.connectionCharIndices : undefined;
           return (
             <div key={i}>
-              {i > 0 && <div className="h-px bg-gray-100 my-4" />}
+              {i > 0 && <hr className="fb-rule-thin my-4" />}
               <div className="flex items-baseline justify-between mb-2">
-                <span className={`text-xs font-medium uppercase tracking-wider ${
-                  solved ? 'text-green-600' : 'text-gray-400'
-                }`}>
+                <span
+                  className="text-xs font-medium uppercase tracking-wider"
+                  style={{ color: solved ? '#4a7c3f' : '#9a8e80' }}
+                >
                   Round {r.round}
                 </span>
-                <span className="text-xs font-medium text-gray-400 tabular-nums">
+                <span className="text-xs font-medium tabular-nums" style={{ color: '#9a8e80' }}>
                   {roundScore > 0 ? roundScore.toLocaleString() : '0'} pts
                 </span>
               </div>
               <AnswerTileRow answer={r.answer} variant={solved ? 'solved' : 'failed'} availableWidth={availableWidth} highlightCharIndices={charIndices} />
-              <p className={`text-sm italic mt-2 ${
-                solved ? 'text-green-700' : 'text-gray-400'
-              }`}>
+              <p
+                className="text-sm italic mt-2"
+                style={{ fontFamily: 'var(--font-serif)', color: solved ? '#4a7c3f' : '#9a8e80' }}
+              >
                 {r.connection}
               </p>
             </div>
@@ -735,20 +768,21 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
         })}
 
         {/* Final Round detail */}
-        <div className="h-px bg-gray-100 my-4" />
+        <hr className="fb-rule-thin my-4" />
         <div className="flex items-baseline justify-between mb-2">
-          <span className={`text-xs font-medium uppercase tracking-wider ${
-            finalSolved ? 'text-green-600' : 'text-gray-400'
-          }`}>
+          <span
+            className="text-xs font-medium uppercase tracking-wider"
+            style={{ color: finalSolved ? '#4a7c3f' : '#9a8e80' }}
+          >
             Final Round
           </span>
-          <span className="text-xs font-medium text-gray-400 tabular-nums">
+          <span className="text-xs font-medium tabular-nums" style={{ color: '#9a8e80' }}>
             {finalScore > 0 ? finalScore.toLocaleString() : '0'} pts
           </span>
         </div>
         <AnswerTileRow answer={puzzle.subject} variant={finalSolved ? 'solved' : 'failed'} availableWidth={availableWidth} />
         {hintsUsed > 0 && (
-          <p className="text-xs text-gray-400 mt-2 text-center">
+          <p className="text-xs mt-2 text-center" style={{ color: '#9a8e80' }}>
             Hints used: {[hintsUsed >= 1 && 'Category', hintsUsed >= 2 && 'Connections', hintsUsed >= 3 && 'Vowels'].filter(Boolean).join(', ')}
           </p>
         )}
@@ -765,7 +799,8 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
             href={FEEDBACK_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="block w-full mb-3 text-sm text-gray-400 hover:text-gray-600 cursor-pointer transition-colors text-center"
+            className="block w-full mb-3 text-sm cursor-pointer transition-colors text-center"
+            style={{ color: '#9a8e80' }}
           >
             Give More Feedback
           </a>
@@ -778,7 +813,8 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
               localStorage.setItem(FEEDBACK_KEY, 'true');
               setFeedbackGiven(true);
             }}
-            className="w-full mb-3 py-4 text-base font-semibold bg-player text-white rounded-full cursor-pointer hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+            className="w-full mb-3 py-4 text-base font-semibold cursor-pointer hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+            style={{ background: '#1a1a1b', color: '#F8F5F0' }}
           >
             Give Feedback — Help Shape Fourbe!
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -794,11 +830,11 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
           <button
             onClick={nextPuzzleDate ? onNextPuzzle : undefined}
             disabled={!nextPuzzleDate}
-            className={`w-full mb-3 py-3.5 text-base font-semibold rounded-full transition-colors flex items-center justify-center ${
-              nextPuzzleDate
-                ? 'bg-black text-white cursor-pointer hover:bg-gray-900'
-                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-            }`}
+            className="w-full mb-3 py-3.5 text-base font-semibold transition-colors flex items-center justify-center cursor-pointer"
+            style={nextPuzzleDate
+              ? { background: '#1a1a1b', color: '#F8F5F0', border: '2px solid #1a1a1b' }
+              : { background: '#e8e2d9', color: '#9a8e80', border: '2px solid #e8e2d9', cursor: 'not-allowed' }
+            }
           >
             {nextPuzzleDate ? 'Next Puzzle \u2192' : 'No more puzzles'}
           </button>
@@ -807,7 +843,8 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
         {/* SHARE */}
         <button
           onClick={handleShare}
-          className="w-full py-3.5 text-base font-semibold rounded-full cursor-pointer transition-colors flex items-center justify-center gap-2 border-2 border-black text-black bg-white hover:bg-gray-50"
+          className="w-full py-3.5 text-base font-semibold cursor-pointer transition-colors flex items-center justify-center gap-2"
+          style={{ border: '2px solid #1a1a1b', color: '#1a1a1b', background: 'transparent' }}
         >
           <ShareIcon />
           {shareText}
@@ -816,7 +853,8 @@ export default function GameSession({ puzzle, dateSelector, nextPuzzleDate, onNe
         {/* PLAY AGAIN */}
         <button
           onClick={handlePlayAgain}
-          className="w-full mt-4 text-sm text-gray-400 hover:text-gray-600 cursor-pointer transition-colors text-center"
+          className="w-full mt-4 text-sm cursor-pointer transition-colors text-center"
+          style={{ color: '#9a8e80' }}
         >
           Play Again
         </button>

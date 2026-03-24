@@ -58,7 +58,8 @@ export default function Play() {
           <select
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="mt-4 text-xs text-gray-400 bg-transparent border-none outline-none cursor-pointer opacity-60 hover:opacity-100 transition-opacity"
+            className="mt-4 text-xs bg-transparent border-none outline-none cursor-pointer opacity-60 hover:opacity-100 transition-opacity"
+            style={{ color: '#9a8e80' }}
           >
             {allDates.map((date, i) => (
               <option key={date} value={date}>

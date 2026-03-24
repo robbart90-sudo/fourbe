@@ -263,10 +263,10 @@ const GameRound = forwardRef<GameRoundHandle, GameRoundProps>(function GameRound
       return 'border-player bg-player text-white';
     }
     if (state === 'lost') {
-      if (!revealMask[i]) return 'border-gray-300 bg-gray-100';
+      if (!revealMask[i]) return 'border-[#c9bfb0] bg-[#efe9e0]';
       return 'border-player bg-player text-white';
     }
-    if (!revealMask[i]) return 'border-gray-300 bg-white';
+    if (!revealMask[i]) return 'border-[#c9bfb0] bg-[#F8F5F0]';
     return 'border-player bg-player text-white';
   }
 
@@ -278,28 +278,31 @@ const GameRound = forwardRef<GameRoundHandle, GameRoundProps>(function GameRound
       return `${base} bg-player border-player text-white`;
     }
     if (wrongGuessedLetters.has(letter)) {
-      return `${base} bg-gray-500 border-gray-500 text-white`;
+      return `${base} bg-[#9a8e80] border-[#9a8e80] text-white`;
     }
-    return `${base} bg-gray-100 border-gray-200 text-gray-800 hover:bg-gray-200 active:bg-gray-300`;
+    return `${base} bg-[#efe9e0] border-[#d4c8b8] text-[#1a1a1b] hover:bg-[#e8e2d9] active:bg-[#d4c8b8]`;
   }
 
   return (
     <div className={`flex flex-col items-center ${compact ? 'pt-2 pb-4' : 'pt-6 pb-16'} min-h-[calc(100vh-52px)] relative`}>
       {/* Running score */}
       {runningScore > 0 && (
-        <div className="absolute top-2 right-0 text-sm text-gray-300 tabular-nums font-sans">
+        <div className="absolute top-2 right-0 text-sm tabular-nums font-sans" style={{ color: '#c9bfb0' }}>
           {runningScore.toLocaleString()}
         </div>
       )}
 
       {/* Round label */}
-      <div className={`text-xs font-medium text-gray-400 uppercase tracking-widest ${compact ? 'mb-1' : 'mb-2'}`}>
+      <div className={`text-xs font-medium uppercase tracking-widest ${compact ? 'mb-1' : 'mb-2'}`} style={{ color: '#9a8e80', fontFamily: 'var(--font-sans)' }}>
         {label ?? `Round ${round.round}`}
       </div>
 
       {/* Clue */}
       {!hideClue && (
-        <h2 className="font-serif text-xl text-center text-gray-700 italic mb-3 max-w-md leading-relaxed min-h-[2.5rem] px-4">
+        <h2
+          className="text-center italic mb-3 max-w-md leading-relaxed min-h-[2.5rem] px-4"
+          style={{ fontFamily: 'var(--font-serif)', fontSize: 20, color: '#3d3529' }}
+        >
           {round.clue}
         </h2>
       )}
@@ -321,8 +324,8 @@ const GameRound = forwardRef<GameRoundHandle, GameRoundProps>(function GameRound
                   return (
                     <div
                       key={idx}
-                      className="flex items-center justify-center font-bold font-sans text-gray-500 select-none"
-                      style={{ width: punctWidth, height: tileSize, fontSize: tileFontSize }}
+                      className="flex items-center justify-center font-bold font-sans select-none"
+                      style={{ width: punctWidth, height: tileSize, fontSize: tileFontSize, color: '#9a8e80' }}
                     >
                       {ch}
                     </div>
@@ -371,7 +374,7 @@ const GameRound = forwardRef<GameRoundHandle, GameRoundProps>(function GameRound
                 className={`w-[13px] h-[13px] rounded-full transition-all duration-300 ${
                   isFilled
                     ? 'bg-[#1a1a1b] scale-100'
-                    : 'border-2 border-gray-300 scale-90'
+                    : 'border-2 border-[#c9bfb0] scale-90'
                 } ${justDepleted ? 'animate-wobble' : ''}`}
               />
             );
@@ -414,14 +417,14 @@ const GameRound = forwardRef<GameRoundHandle, GameRoundProps>(function GameRound
                 {Array.from({ length: MAX_LIVES }, (_, i) => (
                   <div
                     key={i}
-                    className={`w-[13px] h-[13px] rounded-full ${i < lives ? 'bg-[#1a1a1b]' : 'border-2 border-gray-300'}`}
+                    className={`w-[13px] h-[13px] rounded-full ${i < lives ? 'bg-[#1a1a1b]' : 'border-2 border-[#c9bfb0]'}`}
                   />
                 ))}
               </div>
               <p className="text-3xl font-bold text-player mb-1">
                 {displayScore}
               </p>
-              <p className="text-sm text-gray-400">points</p>
+              <p className="text-sm" style={{ color: '#9a8e80' }}>points</p>
             </>
           ) : (
             <>
@@ -429,12 +432,12 @@ const GameRound = forwardRef<GameRoundHandle, GameRoundProps>(function GameRound
                 {Array.from({ length: MAX_LIVES }, (_, i) => (
                   <div
                     key={i}
-                    className="w-[13px] h-[13px] rounded-full border-2 border-gray-300"
+                    className="w-[13px] h-[13px] rounded-full border-2 border-[#c9bfb0]"
                   />
                 ))}
               </div>
-              <p className="text-2xl font-bold text-gray-800 mb-1">0</p>
-              <p className="text-sm text-gray-400">points</p>
+              <p className="text-2xl font-bold mb-1" style={{ color: '#1a1a1b' }}>0</p>
+              <p className="text-sm" style={{ color: '#9a8e80' }}>points</p>
             </>
           )}
         </div>
