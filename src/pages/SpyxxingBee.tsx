@@ -19,7 +19,11 @@ type WordSearchInstance = any;
 
 const DICTIONARY = ["BACON", "EGGS", "TOAST", "COFFEE", "WAFFLE", "CEREAL"];
 const THEME_NAME = 'Breakfast';
-const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+const QWERTY_ROWS = [
+  'QWERTYUIOP'.split(''),
+  'ASDFGHJKL'.split(''),
+  'ZXCVBNM'.split(''),
+];
 const HTP_SEEN_KEY = 'spyxxing-bee-played-before';
 const ROWS = 10;
 const COLS = 10;
@@ -1234,9 +1238,9 @@ export default function SpyxxingBee() {
                 cellColor = '#1A1A1A';
                 fontWeight = 700;
               } else if (isAdjacent) {
-                cellColor = '#1A1A1A';
-                cellOpacity = 0.6;
-                fontWeight = 400;
+                cellColor = '#E8530E';
+                cellOpacity = 0.85;
+                fontWeight = 600;
               } else if (isRevealed) {
                 cellColor = '#E8530E';
                 fontWeight = 700;
@@ -1368,43 +1372,44 @@ export default function SpyxxingBee() {
         </div>
       </div>
 
-      {/* Alphabet bar */}
-      <div
-        className="mt-8 flex flex-wrap justify-center max-w-[420px] px-2"
-        style={{ gap: 6 }}
-      >
-        {ALPHABET.map(letter => {
-          const isSelected = selectedLetters.includes(letter);
-          return (
-            <button
-              key={letter}
-              onClick={() => toggleLetter(letter)}
-              className="cursor-pointer spyxxing-key"
-              data-selected={isSelected || undefined}
-              style={{
-                fontFamily: "'Inter', sans-serif",
-                fontWeight: 600,
-                fontSize: '0.85rem',
-                width: 36,
-                height: 36,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: isSelected ? '#E8530E' : '#F5F0E8',
-                color: isSelected ? '#FFFFFF' : '#1A1A1A',
-                opacity: isSelected ? 1 : 0.65,
-                border: '1px solid #1A1A1A',
-                borderRadius: 3,
-                boxShadow: isSelected ? 'none' : '2px 2px 0px #1A1A1A',
-                transform: isSelected ? 'translate(2px, 2px)' : 'none',
-                transition: 'all 0.1s ease',
-                padding: 0,
-              }}
-            >
-              {letter}
-            </button>
-          );
-        })}
+      {/* Alphabet bar — QWERTY layout */}
+      <div className="mt-8 flex flex-col items-center max-w-[420px] px-2" style={{ gap: 4 }}>
+        {QWERTY_ROWS.map((row, rowIdx) => (
+          <div key={rowIdx} className="flex justify-center" style={{ gap: 4 }}>
+            {row.map(letter => {
+              const isSelected = selectedLetters.includes(letter);
+              return (
+                <button
+                  key={letter}
+                  onClick={() => toggleLetter(letter)}
+                  className="cursor-pointer spyxxing-key"
+                  data-selected={isSelected || undefined}
+                  style={{
+                    fontFamily: "'Inter', sans-serif",
+                    fontWeight: 600,
+                    fontSize: '0.85rem',
+                    width: 36,
+                    height: 36,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: isSelected ? '#E8530E' : '#F5F0E8',
+                    color: isSelected ? '#FFFFFF' : '#1A1A1A',
+                    opacity: isSelected ? 1 : 0.65,
+                    border: '1px solid #1A1A1A',
+                    borderRadius: 3,
+                    boxShadow: isSelected ? 'none' : '2px 2px 0px #1A1A1A',
+                    transform: isSelected ? 'translate(2px, 2px)' : 'none',
+                    transition: 'all 0.1s ease',
+                    padding: 0,
+                  }}
+                >
+                  {letter}
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </div>
 
       {/* Submit button */}
