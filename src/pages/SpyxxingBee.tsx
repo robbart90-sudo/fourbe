@@ -984,7 +984,7 @@ export default function SpyxxingBee() {
     );
   }
 
-  const canSubmit = selectedLetters.length === MAX_SELECTED;
+  const canSubmit = selectedLetters.length === MAX_SELECTED && !revealActive;
   const activeSet = new Set([
     ...tapSequence.map(t => `${t.r},${t.c}`),
     ...dragPath.map(t => `${t.r},${t.c}`),
